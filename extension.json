@@ -1,0 +1,151 @@
+{
+  "identifier": "co.stuntrocket.waypoint",
+  "name": "Waypoint",
+  "organization": "StuntRocket",
+  "description": "Bookmarking extension for Nova code editor.",
+  "repository": "https://github.com/stuntrocket/waypoint",
+  "bugs": "https://github.com/stuntrocket/waypoint/issues",
+  "funding": "https://github.com/sponsors/stuntrocket",
+  "min_runtime": "4.1",
+  "license": "MIT",
+  "version": "1.0",
+  "categories": ["sidebars"],
+
+  "main": "main.js",
+
+  "activationEvents": ["*"],
+
+  "entitlements": {
+    "clipboard": true,
+    "filesystem": "readwrite"
+  },
+
+  "configWorkspace": [
+    {
+      "key": "waypoint.conf.main.section",
+      "title": "waypoint.conf.main.section.title",
+      "description": "waypoint.conf.main.section.description",
+      "type": "section",
+      "children": [
+        {
+          "key": "waypoint.conf.enabled",
+          "title": "waypoint.conf.enabled.title",
+          "description": "waypoint.conf.enabled.description",
+          "type": "enum",
+          "values": [
+            [true, "waypoint.conf.is-enabled"],
+            [false, "waypoint.conf.is-disabled"]
+          ],
+          "default": true
+        }
+      ]
+    }
+  ],
+
+  "commands": {
+    "extensions": [
+      {
+        "title": "Waypoint: Create Journey",
+        "command": "waypoint.cmd.addJourney",
+        "shortcut": "cmd-opt-j"
+      },
+      {
+        "title": "Waypoint: Toggle Waypoint",
+        "command": "waypoint.cmd.createWaypoint",
+        "shortcut": "cmd-opt-m"
+      },
+      {
+        "title": "Waypoint: Next",
+        "command": "waypoint.cmd.nextWaypoint",
+        "shortcut": "ctrl-opt-cmd-]"
+      },
+      {
+        "title": "Waypoint: Previous",
+        "command": "waypoint.cmd.prevWaypoint",
+        "shortcut": "ctrl-opt-cmd-["
+      },
+      {
+        "title": "Waypoint: Select Journey",
+        "command": "waypoint.cmd.selectJourney",
+        "shortcut": "opt-cmd-;"
+      },
+      {
+        "title": "Waypoint: Select Waypoint in Active Journey",
+        "command": "waypoint.cmd.selectWaypoint",
+        "shortcut": "opt-cmd-'"
+      }
+    ],
+    "editor": [
+      {
+        "title": "Waypoint: Toggle Waypoint On/Off",
+        "command": "waypoint.cmd.createWaypoint",
+        "when": "editorHasFocus",
+        "shortcut": "cmd-opt-m"
+      }
+    ]
+  },
+
+  "sidebars": [
+    {
+      "id": "waypoint",
+      "name": "Waypoint",
+      "smallImage": "waypoint-small",
+      "smallSelectedImage": "waypoint-small",
+      "largeImage": "waypoint-large",
+      "largeSelectedImage": "waypoint-large",
+      "sections": [
+        {
+          "id": "waypoint",
+          "name": "Waypoint",
+          "allowMultiple": true,
+          "placeholderText": "None Found",
+          "placeholderImage": "waypoint-large",
+          "headerCommands": [
+            {
+              "title": "Add",
+              "image": "__builtin.add",
+              "tooltip": "Create Journey",
+              "command": "waypoint.cmd.addJourney"
+            },
+            {
+              "title": "Remove",
+              "image": "__builtin.remove",
+              "tooltip": "Remove selected item",
+              "command": "waypoint.cmd.remove",
+              "when": "viewItem != null"
+            },
+            {
+              "title": "Refresh",
+              "image": "__builtin.refresh",
+              "tooltip": "Refresh Sidebar Tree",
+              "command": "waypoint.cmd.refresh"
+            }
+          ],
+          "contextCommands": [
+            {
+              "title": "Rename",
+              "command": "waypoint.cmd.rename",
+              "when": "viewItem == 'journey' || viewItem == 'waypoint'"
+            },
+            {
+              "title": "Remove",
+              "command": "waypoint.cmd.remove",
+              "when": "viewItem != null"
+            },
+            {
+              "title": "Show in Finder",
+              "command": "waypoint.cmd.showInFinder",
+              "when": "viewItem == 'file'"
+            },
+            { "separator": true },
+            {
+              "title": "Set as active Journey",
+              "command": "waypoint.cmd.activateJourney",
+              "when": "viewItem == 'journey'"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
