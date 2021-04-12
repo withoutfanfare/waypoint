@@ -66,11 +66,36 @@ environment is a workspace or Nova window without a
 workspace.
 */
 exports.isWorkspace = function isWorkspace() {
+  console.log(`nova.workspace.path ${nova.workspace.path}`)
   if (nova.workspace.path == undefined || nova.workspace.path == null) {
     return false
   } else {
     return true
   }
+}
+
+/*
+Returns a boolean representing whether or not a .nova folder is present.
+*/
+exports.isProject = function isProject() {
+  let novaFolder = nova.path.join(nova.workspace.path, ".nova")
+
+  if (!nova.fs.access(novaFolder, nova.fs.F_OK)) {
+    // TODO - make a config setting to auto-create or ask user when this happens.
+    // nova.fs.mkdir(novaFolder)
+    // return novaFolder
+    return false
+  }
+
+  if (!nova.fs.stat(novaFolder).isDirectory()) {
+    return false
+  }
+
+  if (!nova.fs.access(novaFolder, nova.fs.W_OK)) {
+    return false
+  }
+
+  return true
 }
 
 exports.getRndInteger = function getRndInteger(min = 0, max = 50) {
@@ -81,6 +106,10 @@ exports.getTimedUid = function getId() {
   return Date.now()
 }
 
+exports.getId = function getId() {
+  return [exports.getTimedUid(), exports.getRndInteger()].join("_")
+}
+
 exports.capitaliseString = function capitaliseString(s) {
   if (typeof s !== "string") return ""
   return s.charAt(0).toUpperCase() + s.slice(1)
@@ -88,46 +117,6 @@ exports.capitaliseString = function capitaliseString(s) {
 
 exports.filterDuplicates = (itemArr) =>
   itemArr.filter((v, i) => itemArr.indexOf(v) === i)
-
-exports.findValuesHelper = function findValuesHelper(obj, key, val, list) {
-  if (!obj) {
-    return list
-  }
-
-  if (obj instanceof Array) {
-    for (var i in obj) {
-      list = list.concat(exports.findValuesHelper(obj[i], key, val, []))
-    }
-  } else {
-    if (obj[key] && obj[key] === val) {
-      list.push(obj)
-    }
-  }
-
-  if (typeof obj === "object" && obj !== null) {
-    let children = Object.keys(obj)
-    if (children.length > 0) {
-      for (let i = 0; i < children.length; i++) {
-        if (obj[children[i]]) {
-          if (
-            typeof obj[children[i]] === "object" &&
-            obj[children[i]] !== null &&
-            obj[children[i]].length
-          ) {
-            list = list.concat(
-              exports.findValuesHelper(obj[children[i]], key, val, [])
-            )
-          }
-        }
-      }
-    }
-  }
-  return list
-}
-
-exports.findValues = function findValues(obj, key, val) {
-  return exports.findValuesHelper(obj, key, val, [])
-}
 
 /*
  * Returns an array that has been stripped of null, blank, and undefined elements.
@@ -175,69 +164,6 @@ exports.findByAttributeRecursive = function findByAttributeRecursive(
     }
   }
   return false
-}
-
-/**
- * @param {array} tree - treeview
- * @param {string} nodeId - node id to search for
- * @param {object} prop - object attribute to base search on
- * @param {boolean} byIndex -
- * @param {array} arr -
- */
-exports.findByIdRecursive = function findByIdRecursive(
-  tree,
-  nodeId,
-  prop = "",
-  byIndex = false,
-  arr = []
-) {
-  for (let [index, node] of tree.entries()) {
-    if (node && node.identifier && node.identifier === nodeId) {
-      return byIndex ? [...arr, index] : node
-    }
-
-    if (node && prop && prop.length && node[prop] && node[prop].length) {
-      let found = exports.findByIdRecursive(node[prop], nodeId, prop, byIndex, [
-        ...arr,
-        index,
-      ])
-
-      if (found) {
-        return found
-      }
-    }
-  }
-  return false
-}
-
-exports.getId = function getId() {
-  return [exports.getTimedUid(), exports.getRndInteger()].join("_")
-}
-
-/**
- * Recursive convert to json
- * @param {node} node - tree item
- */
-exports.itemToJson = function itemToJson(node) {
-  if (!node) {
-    return false
-  }
-
-  let newObj = {}
-  for (let [k, v] of Object.entries(node)) {
-    if (k !== "parent") {
-      if (k == "children") {
-        newObj.children = v
-          .map((file) => {
-            return exports.itemToJson(file)
-          })
-          .filter(Boolean)
-      } else {
-        newObj[k] = v
-      }
-    }
-  }
-  return newObj
 }
 
 /**

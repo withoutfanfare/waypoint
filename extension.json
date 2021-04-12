@@ -7,7 +7,7 @@
   "bugs": "https://github.com/withoutfanfare/waypoint/issues",
   "min_runtime": "4.1",
   "license": "MIT",
-  "version": "1.0",
+  "version": "1.0.0",
   "categories": ["sidebars"],
 
   "main": "main.js",
@@ -46,12 +46,12 @@
       {
         "title": "Waypoint: Create Journey",
         "command": "waypoint.cmd.addJourney",
-        "shortcut": "cmd-opt-j"
+        "shortcut": "ctrl-opt-cmd-j"
       },
       {
         "title": "Waypoint: Toggle Waypoint",
         "command": "waypoint.cmd.createWaypoint",
-        "shortcut": "cmd-opt-m"
+        "shortcut": "ctrl-opt-cmd-m"
       },
       {
         "title": "Waypoint: Next",
@@ -66,20 +66,20 @@
       {
         "title": "Waypoint: Select Journey",
         "command": "waypoint.cmd.selectJourney",
-        "shortcut": "opt-cmd-;"
+        "shortcut": "ctrl-opt-cmd-;"
       },
       {
         "title": "Waypoint: Select Waypoint in Active Journey",
         "command": "waypoint.cmd.selectWaypoint",
-        "shortcut": "opt-cmd-'"
+        "shortcut": "ctrl-opt-cmd-'"
       }
     ],
     "editor": [
       {
-        "title": "Waypoint: Toggle Waypoint On/Off",
+        "title": "Waypoint: Toggle Waypoint",
         "command": "waypoint.cmd.createWaypoint",
         "when": "editorHasFocus",
-        "shortcut": "cmd-opt-m"
+        "shortcut": "ctrl-opt-cmd-m"
       }
     ]
   },

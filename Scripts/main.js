@@ -10,15 +10,15 @@
  */
 
 const ext = require("./lib/extension")
-
 const {
   log,
   getLocalConfig,
   notify,
   isWorkspace,
-  findValues,
+  isProject,
   findByAttributeRecursive,
 } = require("./lib/utils")
+const { findValues } = require("./lib/helper")
 
 const {
   documentIsClosed,
@@ -70,15 +70,36 @@ const state = {
 }
 
 /**
- * When the 'enabled' status is changed, initialise or deactivate the extension.
+ * Check for Nova Workspace
  */
-preventWorkspace = async function () {
+ensureWorkspace = async function () {
   return new Promise((resolve, reject) => {
     /**
      * If not a project workspace, prevent further execution
      */
+    // log("isWorkspace")
+    // log(isWorkspace())
+    // log(isProject())
+
     if (!isWorkspace()) {
       const msg = nova.localize(`${ext.prefixMessage()}.not-workspace-error`)
+      reject(msg)
+    } else if (!isProject()) {
+      const msg = nova.localize(`${ext.prefixMessage()}.not-project-error`)
+      reject(msg)
+    } else {
+      resolve(true)
+    }
+  })
+}
+
+/**
+ * Check for .nova folder
+ */
+ensureProject = async function () {
+  return new Promise((resolve, reject) => {
+    if (!isProject()) {
+      const msg = nova.localize(`${ext.prefixMessage()}.not-project-error`)
       reject(msg)
     } else {
       resolve(true)
@@ -824,7 +845,8 @@ exports.activate = async function () {
 
         if (!nova.inDevMode()) {
           const msg = nova.localize(`${ext.prefixMessage()}.activation-error`)
-          nova.workspace.showErrorMessage(msg)
+          // nova.workspace.showErrorMessage(msg)
+          notify("activation_err", msg)
           state.activationErrorHandled = true
         }
       }
@@ -840,7 +862,8 @@ exports.activate = async function () {
 
 exports.initialise = async function () {
   return Promise.all([
-    preventWorkspace(),
+    ensureWorkspace(),
+    ensureProject(),
     initialiseWorkspaceHandler(),
     initialiseStorageHandler(),
     initialiseEmitHandler(),
@@ -866,7 +889,8 @@ exports.initialise = async function () {
           const msg = nova.localize(
             `${ext.prefixMessage()}.initialisation-error`
           )
-          nova.workspace.showErrorMessage(msg)
+          // nova.workspace.showErrorMessage(msg)
+          notify("initialisation_err", msg)
           state.initialisationErrorHandled = true
         }
       }
@@ -895,7 +919,8 @@ exports.load = async function () {
 
           if (!nova.inDevMode()) {
             const msg = nova.localize(`${ext.prefixMessage()}.load-error`)
-            nova.workspace.showErrorMessage(msg)
+            // nova.workspace.showErrorMessage(msg)
+            notify("load_err", msg)
             state.loadErrorHandled = true
           }
         }
@@ -937,7 +962,8 @@ exports.launch = async function () {
 
           if (!nova.inDevMode()) {
             const msg = nova.localize(`${ext.prefixMessage()}.launch-error`)
-            nova.workspace.showErrorMessage(msg)
+            // nova.workspace.showErrorMessage(msg)
+            notify("launch_err", msg)
             state.launchErrorHandled = true
           }
         }
@@ -971,7 +997,8 @@ exports.subscribe = async function () {
 
         if (!nova.inDevMode()) {
           const msg = nova.localize(`${ext.prefixMessage()}.subscribe-error`)
-          nova.workspace.showErrorMessage(msg)
+          // nova.workspace.showErrorMessage(msg)
+          notify("subscribe_err", msg)
           state.subscribeErrorHandled = true
         }
       }

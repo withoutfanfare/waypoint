@@ -12,10 +12,11 @@ const {
   sortByLine,
   capitaliseString,
   filterDuplicates,
-  findByAttributeRecursive,
-  itemToJson,
   getOpenDocumentsRootItems,
+  findByAttributeRecursive,
 } = require("./lib/utils")
+
+const { itemToJson } = require("./lib/helper")
 
 const {
   getDocumentText,
