@@ -1,6 +1,6 @@
 # Waypoint
 
-**Waypoint** extension provides **Lightweight Task Bookmarking** in your Sidebar.
+**Waypoint** extension provides **Lightweight Task Bookmarking** extension for [Nova](https://nova.app) code editor.
 
 ## Concept
 
@@ -62,10 +62,15 @@ I'm working on the following improvements/bugs:
 - Non Nova Project Workspace support (i.e ad-hoc folders)
 - Better support for multiple Nova windows and document editors
 - Improve "line realignent" mechanism
+- Drag and drop Waypoints into other Journeys
+
+## Issues
+
+[Report Issues](https://github.com/withoutfanfare/waypoint/issues) here help me to improve the extension.
 
 ## Acknowledgements
 
-I wouldn't have been able to get started without looking at the code from their extensions.
+I wouldn't have been able to get started without looking at and experimenting with code from their extensions. Thank you.
 
  - Martin Kopischke
  - Jason Platts
