@@ -1,0 +1,8 @@
+.DS_Store
+/private
+/.private
+.private
+
+/.nova
+/.nova/waypoint.json
+/.nova/waypoints.json
