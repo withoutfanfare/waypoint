@@ -20,10 +20,10 @@ If no Journey is active, then a new one will be created and activated with the c
 
 ### Command Palette
 
-- **Waypoint:** Create Journey (```cmd-opt-j```)
-- **Waypoint:** Toggle Waypoint in Active Journey (```cmd-opt-m```)
-- **Waypoint:** Select Journey (```opt-cmd-;```)
-- **Waypoint:** Select Waypoint in Active Journey (```opt-cmd-'```)
+- **Waypoint:** Create Journey (```ctrl-opt-cmd-j```)
+- **Waypoint:** Toggle Waypoint in Active Journey (```ctrl-opt-cmd-m```)
+- **Waypoint:** Select Journey (```ctrl-opt-cmd-;```)
+- **Waypoint:** Select Waypoint in Active Journey (```ctrl-opt-cmd-'```)
 - **Waypoint:** Previous Waypoint (```ctrl-opt-cmd-[```)
 - **Waypoint:** Next Waypoint (```ctrl-opt-cmd-]```)
 
@@ -72,6 +72,6 @@ I'm working on the following improvements/bugs:
 
 I wouldn't have been able to get started without looking at and experimenting with code from their extensions. Thank you.
 
- - Martin Kopischke
- - Jason Platts
+ - Martin Kopischke | [Nova Page](https://extensions.panic.com/extensions/net.kopischke/)
+ - Jason Platts | [Nova Page](https://extensions.panic.com/extensions/jasonplatts/jasonplatts.TODO/)
 
