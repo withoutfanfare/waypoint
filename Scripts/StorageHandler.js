@@ -30,8 +30,10 @@ class StorageHandler {
       try {
         this.storageFile = nova.fs.open(this.waypointFilePath, mode)
         resolve(this.storageFile)
-      } catch (error) {
-        reject(error)
+      } catch (_err) {
+        log("STORAGE ERROR! Error 37")
+        log(_err)
+        reject(_err)
       }
     })
   }
@@ -49,10 +51,16 @@ class StorageHandler {
           this.clearBackupWaypointFile()
           resolve(true)
         })
-        .catch((message) => {
+        .catch((_err) => {
+          log("STORAGE ERROR! Error 38")
+          // TODO: Notify the user about this instead and give instructions to resolve manually?
           this.restoreBackupWaypointFile()
           this.clearBackupWaypointFile()
-          resolve(message)
+          resolve(_err)
+
+          // let msg = "Error interacting with waypoint backup file - please review the .nova folder."
+          // notify('backup_waypoint_file_error', msg)
+          // reject(_err)
         })
     })
   }
@@ -69,8 +77,10 @@ class StorageHandler {
           this.waypointFilePath
         )
         resolve(true)
-      } catch (error) {
-        reject(false)
+      } catch (_err) {
+        log("STORAGE ERROR! Error 39")
+        log(_err)
+        reject(_err)
       }
     })
   }
@@ -90,11 +100,15 @@ class StorageHandler {
             )
             resolve(true)
           })
-          .catch((message) => {
-            throw message
+          .catch((_err) => {
+            log("STORAGE ERROR! Error 40")
+            log(_err)
+            reject(_err)
           })
-      } catch (error) {
-        reject(error)
+      } catch (_err) {
+        log("STORAGE ERROR! Error 41")
+        log(_err)
+        reject(_err)
       }
     })
   }
@@ -106,10 +120,16 @@ class StorageHandler {
     return new Promise((resolve, reject) => {
       try {
         // TODO - rem is always undefined?
-        let rem = nova.fs.remove(this.waypointFilePath + ".bck")
-        resolve(true)
-      } catch (error) {
-        reject(error)
+        if (nova.fs.access(this.waypointFilePath + ".bck", nova.fs.W_OK)) {
+          let rem = nova.fs.remove(this.waypointFilePath + ".bck")
+          resolve(true)
+        } else {
+          resolve(true)
+        }
+      } catch (_err) {
+        log("STORAGE ERROR! Error 42")
+        log(_err)
+        reject(_err)
       }
     })
   }
@@ -126,8 +146,10 @@ class StorageHandler {
         const lines = nova.fs.open(this.waypointFilePath).readlines()
         let ret = lines.length > 0 ? JSON.parse(lines.join("\n")) : null
         resolve(ret)
-      } catch (error) {
-        reject(error)
+      } catch (_err) {
+        log("STORAGE ERROR! Error 43")
+        log(_err)
+        reject(_err)
       }
     })
   }
@@ -152,10 +174,14 @@ class StorageHandler {
           storageFile.write(dataString)
           resolve(dataString)
         } else {
+          log("STORAGE ERROR! Error 44")
+          log("Unable to write json file.")
           reject("Unable to write json file.")
         }
-      } catch (error) {
-        reject(error)
+      } catch (_err) {
+        log("STORAGE ERROR! Error 45")
+        log(_err)
+        reject(_err)
       }
     })
   }

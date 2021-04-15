@@ -23,7 +23,7 @@ exports.getLocalConfig = function (key, type) {
  * @param {string} message - NotificationRequest.message.
  */
 exports.notify = function (id, message) {
-  const request = new NotificationRequest(id)
+  const request = new NotificationRequest(id + exports.getId())
   request.title = nova.extension.name
   request.body = message
 
@@ -74,16 +74,29 @@ exports.isWorkspace = function isWorkspace() {
   }
 }
 
+/**
+ * Check for Nova Workspace
+ */
+exports.ensureWorkspace = function ensureWorkspace() {
+  return new Promise((resolve, reject) => {
+    /**
+     * If not a project workspace, prevent further execution
+     */
+    if (!exports.isWorkspace()) {
+      const msg = nova.localize(`${ext.prefixMessage()}.not-workspace-error`)
+      reject(msg)
+    } else {
+      resolve(true)
+    }
+  })
+}
+
 /*
 Returns a boolean representing whether or not a .nova folder is present.
 */
 exports.isProject = function isProject() {
   let novaFolder = nova.path.join(nova.workspace.path, ".nova")
-
-  if (!nova.fs.access(novaFolder, nova.fs.F_OK)) {
-    // TODO - make a config setting to auto-create or ask user when this happens.
-    // nova.fs.mkdir(novaFolder)
-    // return novaFolder
+  if (!nova.fs.access(novaFolder, nova.fs.W_OK)) {
     return false
   }
 
@@ -91,9 +104,35 @@ exports.isProject = function isProject() {
     return false
   }
 
-  if (!nova.fs.access(novaFolder, nova.fs.W_OK)) {
-    return false
-  }
+  return true
+}
+
+/*
+Returns a boolean representing whether or not a .nova folder is present.
+*/
+exports.ensureNovaFolderExists = function ensureNovaFolderExists() {
+  return new Promise((resolve, reject) => {
+    try {
+      let novaFolder = nova.path.join(nova.workspace.path, ".nova")
+
+      if (!nova.fs.access(novaFolder, nova.fs.F_OK)) {
+        // TODO - make a config setting to auto-create or ask user when this happens.
+        nova.fs.mkdir(novaFolder)
+      }
+
+      if (
+        nova.fs.stat(novaFolder).isDirectory() &&
+        nova.fs.access(novaFolder, nova.fs.W_OK)
+      ) {
+        resolve(novaFolder)
+      } else {
+        reject(false)
+      }
+    } catch (_err) {
+      reject(false)
+      console.log(_err)
+    }
+  })
 
   return true
 }

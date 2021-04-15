@@ -1,6 +1,6 @@
 # Waypoint
 
-**Waypoint** extension provides **Lightweight Task Bookmarking** extension for [Nova](https://nova.app) code editor.
+**Waypoint** extension provides **Lightweight Task Bookmarking** for [Nova](https://nova.app) code editor.
 
 ## Concept
 
@@ -46,7 +46,6 @@ You can also configure preferences on a per-project basis in ```Project → Proj
 ## Limitations
 
 - Because the extension uses text strings to create it's markers, it doesn't handle duplicate lines very well. I'm working on improving this.
-- Only works in Nova Project Workspaces. Will improve this soon so that ad-hoc folders will work as well.
 
 ## Future Improvements
 
@@ -59,10 +58,10 @@ I'm working on the following improvements/bugs:
 - Handle bookmarking for duplicated lines (currently waypoints must be unique)
 - Improve Sidebar sorting with options
 - Handle renamed files
-- Non Nova Project Workspace support (i.e ad-hoc folders)
 - Better support for multiple Nova windows and document editors
 - Improve "line realignent" mechanism
 - Drag and drop Waypoints into other Journeys
+- If user deletes their .nova folder, then destroy the in memory tree data
 
 ## Issues
 
@@ -70,7 +69,7 @@ I'm working on the following improvements/bugs:
 
 ## Acknowledgements
 
-I wouldn't have been able to get started without looking at and experimenting with code from their extensions. Thank you.
+I wouldn't have been able to get started without experimenting with code from their extensions. Thank you.
 
  - Martin Kopischke | [Nova Page](https://extensions.panic.com/extensions/net.kopischke/)
  - Jason Platts | [Nova Page](https://extensions.panic.com/extensions/jasonplatts/jasonplatts.TODO/)

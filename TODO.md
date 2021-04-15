@@ -1,23 +1,20 @@
 # Bugs
 
-- 
-
 # Improvements
 
-- When a document is renamed, update the file
-- When there are zero waypoints in a file, remove it from journey
+- Automatic backup and recovery for Waypoint file
+- More translations (english only atm)
+- Export all Waypoints to markdown
+- Add comments to Journeys and Waypoints.
+- Handle bookmarking for duplicated lines (currently waypoints must be unique)
+- Improve Sidebar sorting with options
+- Handle renamed files
+- Better support for multiple Nova windows and document editors
+- Improve "line realignent" mechanism
+- Drag and drop Waypoints into other Journeys
+- If user deletes their .nova folder, then destroy the in memory tree data
 
 # Features
-
-## Add support for non-workspace usage
-
-Instead of using .nova/waypoints.json, we could use the Application-Support folder for non-workspace usage.
-
-- TODO 1 - watch for creation/deletion of a ./.nova folder
-
-[File Watcher Documentation](https://docs.nova.app/api-reference/file-system/#watchpattern-callable)
-
-
 
 ## Open file in File Panel
 

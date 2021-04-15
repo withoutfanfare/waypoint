@@ -14,6 +14,7 @@ const {
   filterDuplicates,
   getOpenDocumentsRootItems,
   findByAttributeRecursive,
+  ensureNovaFolderExists,
 } = require("./lib/utils")
 
 const { itemToJson } = require("./lib/helper")
@@ -77,7 +78,7 @@ module.exports.TreeDataProvider = class TreeDataProvider {
             resolve(json)
           })
           .catch((message) => {
-            throw message
+            reject(message)
           })
       } catch (error) {
         reject(error)
@@ -489,13 +490,13 @@ module.exports.TreeDataProvider = class TreeDataProvider {
 
       if (!jsonObj) {
         const msg = nova.localize(`${ext.prefixMessage()}.empty-json-error`)
-        throw msg
+        reject(msg)
       }
 
       let jsonString = JSON.stringify(jsonObj)
       if (!jsonString) {
         const msg = nova.localize(`${ext.prefixMessage()}.convert-json-error`)
-        throw msg
+        reject(msg)
       }
 
       jsonString = jsonString
@@ -517,13 +518,13 @@ module.exports.TreeDataProvider = class TreeDataProvider {
               this.eventHandler.emit("data-saved")
               resolve(true)
             })
-            .catch((message) => {
-              reject(message)
+            .catch((_err) => {
+              reject(_err)
             })
         })
-        .catch((message) => {
-          log(message)
-          reject(message)
+        .catch((_err) => {
+          log(_err)
+          reject(_err)
         })
     })
   }
@@ -552,6 +553,9 @@ module.exports.TreeDataProvider = class TreeDataProvider {
    */
   addJourney(journeyName) {
     let index = false
+    if (!this.rootItems) {
+      this.rootItems = []
+    }
     if (journeyName && journeyName !== "") {
       journeyName = journeyName.trim()
       index = this.rootItems.findIndex((i) => i.name === journeyName)
@@ -578,6 +582,11 @@ module.exports.TreeDataProvider = class TreeDataProvider {
   renameJourney(newName, oldName) {
     return new Promise((resolve, reject) => {
       try {
+        if (!this.rootItems || !this.rootItems.length) {
+          console.log("E4")
+          reject(false)
+        }
+
         let index = false
         if (oldName && oldName !== "") {
           oldName = oldName.trim()
@@ -792,7 +801,7 @@ module.exports.TreeDataProvider = class TreeDataProvider {
         : EditorOrWorkspace.activeTextEditor
 
       if (!myEditor || !myEditor.document || !myEditor.document.path) {
-        reject("Unable to assert document details.")
+        reject("Please open a document to create a waypoint.")
       }
 
       this.ensureActiveJourney()
@@ -802,97 +811,103 @@ module.exports.TreeDataProvider = class TreeDataProvider {
             reject("Unable to assert active journey.")
           }
 
-          getLineFromEditorSelected(myEditor).then((payload) => {
-            if (!payload || !payload.text || payload.number < 0) {
-              const msg = nova.localize(
-                `${ext.prefixMessage()}.empty-line-error`
+          getLineFromEditorSelected(myEditor)
+            .then((payload) => {
+              if (!payload || !payload.text || payload.number < 0) {
+                const msg = nova.localize(
+                  `${ext.prefixMessage()}.empty-line-error`
+                )
+                notify("save_empty_line_err", msg)
+                reject("Unable to waypoint empty lines")
+              }
+
+              const currentLine = payload.text
+              const lineNumber = payload.number
+              let currentFile = false
+
+              const filename = nova.path.basename(myEditor.document.path)
+              const filenameRelative = nova.workspace.relativizePath(
+                myEditor.document.path
               )
-              notify("save_empty_line_err", msg)
-              reject("Unable to waypoint empty lines")
-            }
 
-            const currentLine = payload.text
-            const lineNumber = payload.number
-            let currentFile = false
+              if (!filenameRelative || filenameRelative == "") {
+                log("Unable to assert relative document path")
+                reject("Unable to assert relative document path")
+              }
 
-            const filename = nova.path.basename(myEditor.document.path)
-            const filenameRelative = nova.workspace.relativizePath(
-              myEditor.document.path
-            )
+              if (!active.children || !active.children.length) {
+                active.children = []
+              }
 
-            if (!filenameRelative || filenameRelative == "") {
-              log("Unable to assert relative document path")
-              reject("Unable to assert relative document path")
-            }
+              let index = active.children.findIndex((i) => {
+                return i && i.name && i.name === filenameRelative
+              })
 
-            if (!active.children || !active.children.length) {
-              active.children = []
-            }
+              if (index < 0) {
+                currentFile = new WaypointItem({
+                  name: filenameRelative,
+                  path: filenameRelative,
+                  uri: myEditor.document.uri,
+                  line: false,
+                  comment: "TODO",
+                  children: [],
+                })
 
-            let index = active.children.findIndex((i) => {
-              return i && i.name && i.name === filenameRelative
+                active.children.push(currentFile)
+              } else {
+                currentFile = active.children[index]
+              }
+
+              if (!currentFile || !currentFile.name) {
+                const msg = nova.localize(
+                  `${ext.prefixMessage()}.empty-file-name`
+                )
+                notify("save_file_waypoint_err", msg)
+                reject("Unable to assert active file.")
+              }
+
+              let index2 = -1
+              if (currentFile.children && currentFile.children.length) {
+                index2 = currentFile.children.findIndex(
+                  (i) => i.line == lineNumber
+                )
+              }
+
+              if (index2 < 0) {
+                let currentWaypoint = new WaypointItem({
+                  name: `${currentLine}`,
+                  path: filenameRelative,
+                  uri: false,
+                  line: lineNumber,
+                  waypoint: true,
+                  comment: "TODO2",
+                })
+
+                currentFile.addChild(currentWaypoint)
+
+                this.eventHandler.emit("waypoint-created", {
+                  waypoint: currentWaypoint,
+                })
+
+                resolve(currentWaypoint)
+              } else {
+                let del = currentFile
+                let n = del.children[index2]
+
+                delete del.children[index2] // Delete it for the toggle effect.
+
+                this.eventHandler.emit("node-deleted", {
+                  waypoint: n,
+                })
+
+                resolve(del)
+              }
             })
-
-            if (index < 0) {
-              currentFile = new WaypointItem({
-                name: filenameRelative,
-                path: filenameRelative,
-                uri: myEditor.document.uri,
-                line: false,
-                comment: "TODO",
-                children: [],
-              })
-
-              active.children.push(currentFile)
-            } else {
-              currentFile = active.children[index]
-            }
-
-            if (!currentFile || !currentFile.name) {
-              const msg = nova.localize(
-                `${ext.prefixMessage()}.empty-file-name`
-              )
-              notify("save_file_waypoint_err", msg)
-              reject("Unable to assert active file.")
-            }
-
-            let index2 = -1
-            if (currentFile.children && currentFile.children.length) {
-              index2 = currentFile.children.findIndex(
-                (i) => i.line == lineNumber
-              )
-            }
-
-            if (index2 < 0) {
-              let currentWaypoint = new WaypointItem({
-                name: `${currentLine}`,
-                path: filenameRelative,
-                uri: false,
-                line: lineNumber,
-                waypoint: true,
-                comment: "TODO2",
-              })
-
-              currentFile.addChild(currentWaypoint)
-
-              this.eventHandler.emit("waypoint-created", {
-                waypoint: currentWaypoint,
-              })
-
-              resolve(currentWaypoint)
-            } else {
-              let del = currentFile
-              let n = del.children[index2]
-
-              delete del.children[index2] // Delete it for the toggle effect.
-
-              this.eventHandler.emit("node-deleted", {
-                waypoint: n,
-              })
-
-              resolve(del)
-            }
-          })
+            .catch((_err) => {
+              log("getLineFromEditorSelected catch")
+              log(_err)
+              reject(_err)
+            })
         })
         .catch((_err) => {
           log("ensureActiveJourney catch")

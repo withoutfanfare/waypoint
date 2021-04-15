@@ -15,8 +15,9 @@ const {
   getLocalConfig,
   notify,
   isWorkspace,
-  isProject,
   findByAttributeRecursive,
+  ensureNovaFolderExists,
+  ensureWorkspace,
 } = require("./lib/utils")
 const { findValues } = require("./lib/helper")
 
@@ -62,49 +63,16 @@ const configKeys = {
  * @property {boolean} activationErrorHandled - Has an activation error been handled already?
  */
 const state = {
+  activated: false,
+  initialised: false,
+  launched: false,
+  loaded: false,
+  subscribed: false,
   activationErrorHandled: false,
   initialisationErrorHandled: false,
   launchErrorHandled: false,
   loadErrorHandled: false,
   subscribeErrorHandled: false,
-}
-
-/**
- * Check for Nova Workspace
- */
-ensureWorkspace = async function () {
-  return new Promise((resolve, reject) => {
-    /**
-     * If not a project workspace, prevent further execution
-     */
-    // log("isWorkspace")
-    // log(isWorkspace())
-    // log(isProject())
-
-    if (!isWorkspace()) {
-      const msg = nova.localize(`${ext.prefixMessage()}.not-workspace-error`)
-      reject(msg)
-    } else if (!isProject()) {
-      const msg = nova.localize(`${ext.prefixMessage()}.not-project-error`)
-      reject(msg)
-    } else {
-      resolve(true)
-    }
-  })
-}
-
-/**
- * Check for .nova folder
- */
-ensureProject = async function () {
-  return new Promise((resolve, reject) => {
-    if (!isProject()) {
-      const msg = nova.localize(`${ext.prefixMessage()}.not-project-error`)
-      reject(msg)
-    } else {
-      resolve(true)
-    }
-  })
 }
 
 /**
@@ -125,11 +93,100 @@ function updateConfig() {
   return new Promise((resolve, reject) => {
     try {
       const prefix = ext.prefixConfig()
-      if (!nova.config.get(`${prefix}.updated.v0.0.1`)) {
-        nova.config.set(`${prefix}.updated.v0.0.1`, true)
+      if (!nova.config.get(`${prefix}.updated.v1.0.3`)) {
+        nova.config.set(`${prefix}.updated.v1.0.3`, true)
       }
       resolve(true)
     } catch (_err) {
+      log("Error 1")
+      log(_err)
+      reject(_err)
+    }
+  })
+}
+
+/**
+ * Register configuration listeners.
+ */
+function registerConfigListeners() {
+  return new Promise((resolve, reject) => {
+    try {
+      // nova.config.onDidChange(configKeys.enabled, updateEnabled, "enabled")
+      nova.workspace.config.onDidChange(
+        configKeys.enabled,
+        updateEnabled,
+        "enabled"
+      )
+      resolve(true)
+    } catch (_err) {
+      log("Error 2")
+      log(_err)
+      reject(_err)
+    }
+  })
+}
+
+/**
+ *
+ */
+function initialiseWorkspaceHandler() {
+  return new Promise((resolve, reject) => {
+    try {
+      myWorkspaceHandler = new WorkspaceHandler()
+      resolve(true)
+    } catch (_err) {
+      log("Error 3")
+      log(_err)
+      reject(_err)
+    }
+  })
+}
+
+/**
+ *
+ */
+function initialiseStorageHandler() {
+  return new Promise((resolve, reject) => {
+    try {
+      myStorageHandler = new StorageHandler({
+        filename: MARKER_FILENAME,
+      })
+      resolve(true)
+    } catch (_err) {
+      log("Error 4")
+      log(_err)
+      reject(_err)
+    }
+  })
+}
+
+/**
+ *
+ */
+function initialiseEmitHandler() {
+  return new Promise((resolve, reject) => {
+    try {
+      myEventHandler = new Emitter()
+      resolve(true)
+    } catch (_err) {
+      log("Error 5")
+      log(_err)
+      reject(_err)
+    }
+  })
+}
+
+/**
+ *
+ */
+function initialiseTreeDataProvider(storageHandler) {
+  return new Promise((resolve, reject) => {
+    try {
+      dataProvider = new TreeDataProvider(storageHandler, myEventHandler)
+      resolve(true)
+    } catch (_err) {
+      log("Error 6")
+      log(_err)
       reject(_err)
     }
   })
@@ -157,13 +214,16 @@ function addJourney(journeyName) {
           exports.launch()
         })
       })
-      .catch((message) => {
-        throw message
+      .catch((_err) => {
+        log("Error 7")
+        log(_err)
+        throw _err
       })
   } catch (_err) {
+    log("Error 9")
+    log(_err)
     const msg = nova.localize(`${ext.prefixMessage()}.add-journey-error`)
     notify("journey_created_error", msg)
-    log(_err)
   }
 }
 
@@ -182,37 +242,46 @@ function renameJourney(journeyName) {
       })
     })
     .catch((_err) => {
+      log("Error 10")
+      log(_err)
       const msg = nova.localize(`${ext.prefixMessage()}.rename-journey-error`)
-      console.log(_err)
+      notify("rename_journey-error", msg)
     })
 }
 
 function save() {
   return new Promise((resolve, reject) => {
-    dataProvider
-      .save()
-      .then(() => {
-        exports
-          .load()
-          .then((res) => {
+    ensureNovaFolderExists()
+      .then(myStorageHandler.initWaypointFile())
+      .then((res) => {
+        dataProvider
+          .save()
+          .then(() => {
             exports
-              .launch()
+              .load()
               .then((res) => {
-                return resolve(true)
+                exports
+                  .launch()
+                  .then((res) => {
+                    return resolve(true)
+                  })
+                  .catch((_err) => {
+                    log("Error 13")
+                    log(_err)
+                    reject(_err)
+                  })
               })
               .catch((_err) => {
-                console.log(_err)
+                log("Error 12")
+                log(_err)
                 reject(_err)
               })
           })
           .catch((_err) => {
-            console.log(_err)
+            log("Error 11")
+            log(_err)
             reject(_err)
           })
-      })
-      .catch((_err) => {
-        console.log(_err)
-        reject(_err)
       })
   })
 }
@@ -224,9 +293,15 @@ function save() {
  * @param {object} textEditor - Nova textEditor object
  */
 function handleOpenFileSave(textEditor) {
-  // log("handleOpenFileSave")
+  let roots =
+    dataProvider && dataProvider.rootItems ? dataProvider.rootItems : []
+
+  if (!roots || !roots.length) {
+    return false
+  }
+
   let fileNodes = findValues(
-    dataProvider.rootItems,
+    roots,
     "name",
     nova.workspace.relativizePath(textEditor.document.path)
   )
@@ -271,22 +346,28 @@ function handleOpenFileSave(textEditor) {
                 )
 
                 if (lineNumber && lineNumber !== currentLine) {
-                  // console.log(`Line Number Adjusted:  ${lineNumber}`)
+                  // log(`Line Number Adjusted:  ${lineNumber}`)
                   waypointNodes[ind].line = lineNumber
                   // TODO - highlight line in file gutter somehow
                 }
               }
             }
           } catch (_err) {
-            console.log(_err)
+            log("Error 14")
+            log(_err)
           }
         }
       }
     }
 
-    save().then((res) => {
-      myEventHandler.emit("save-complete")
-    })
+    save()
+      .then((res) => {
+        myEventHandler.emit("save-complete")
+      })
+      .catch((_err) => {
+        log("Error 15")
+        log(_err)
+      })
   }
 }
 
@@ -304,11 +385,23 @@ function chooseJourney() {
     },
     (sname, ind) => {
       dataProvider.setActiveJourney(sname)
-      dataProvider.save().then(() => {
-        exports.load().then((res) => {
-          exports.launch()
+      dataProvider
+        .save()
+        .then(() => {
+          exports
+            .load()
+            .then((res) => {
+              exports.launch()
+            })
+            .catch((_err) => {
+              log("Error 17")
+              log(_err)
+            })
         })
-      })
+        .catch((_err) => {
+          log("Error 16")
+          log(_err)
+        })
     }
   )
 }
@@ -343,6 +436,7 @@ function chooseWaypoint(file, index) {
     return false
   }
 
+  let waypoints = []
   let curFile = active.children[index]
 
   if (curFile && curFile.children && curFile.children.length) {
@@ -416,14 +510,21 @@ function registerCommands() {
         try {
           if (sname) {
             dataProvider.setActiveJourney(sname)
-            dataProvider.save().then(() => {
-              exports.load().then((res) => {
-                exports.launch()
+            dataProvider
+              .save()
+              .then(() => {
+                exports.load().then((res) => {
+                  exports.launch()
+                })
               })
-            })
+              .catch((_err) => {
+                log("Error 18")
+                log(_err)
+              })
           }
         } catch (_err) {
-          console.log(_err)
+          log("Error 19")
+          log(_err)
         }
       })
 
@@ -452,7 +553,9 @@ function registerCommands() {
           let active = dataProvider.getActiveJourney()
           chooseFile(active)
         } catch (_err) {
-          console.log(_err)
+          log("Error 20")
+          log(_err)
+          return false
         }
       })
 
@@ -504,7 +607,8 @@ function registerCommands() {
               })
             })
             .catch((_err) => {
-              console.log(_err)
+              log("Error 21")
+              log(_err)
             })
         })
       })
@@ -523,11 +627,15 @@ function registerCommands() {
                   myEventHandler.emit("save-complete")
                 })
                 .catch((_err) => {
-                  console.log(_err)
+                  log("Error 22")
+                  log(_err)
                 })
             })
             .catch((_err) => {
-              console.log(_err)
+              log("Error 23")
+              log(_err)
+              notify("file_assertion_error", _err)
+              return false
             })
         }
       )
@@ -598,165 +706,10 @@ function registerCommands() {
         }
       })
 
-      // treeView.onDidChangeSelection((selection) => {})
-      // treeView.onDidExpandElement((element) => {})
-      // treeView.onDidCollapseElement((element) => {})
-      // treeView.onDidChangeVisibility(() => {})
-
       resolve(true)
     } catch (_err) {
-      console.log(_err)
-      reject(_err)
-    }
-  })
-}
-
-/**
- *
- */
-function initialiseWorkspaceHandler() {
-  return new Promise((resolve, reject) => {
-    try {
-      myWorkspaceHandler = new WorkspaceHandler()
-      resolve(true)
-    } catch (_err) {
-      console.log(_err)
-      reject(_err)
-    }
-  })
-}
-
-/**
- *
- */
-function initialiseStorageHandler() {
-  return new Promise((resolve, reject) => {
-    try {
-      myStorageHandler = new StorageHandler({
-        filename: MARKER_FILENAME,
-      })
-      resolve(true)
-    } catch (_err) {
-      console.log(_err)
-      reject(_err)
-    }
-  })
-}
-
-/**
- *
- */
-function initialiseEmitHandler() {
-  return new Promise((resolve, reject) => {
-    try {
-      myEventHandler = new Emitter()
-      resolve(true)
-    } catch (_err) {
-      console.log(_err)
-      reject(_err)
-    }
-  })
-}
-
-/**
- *
- */
-function initialiseTreeDataProvider(storageHandler) {
-  return new Promise((resolve, reject) => {
-    try {
-      dataProvider = new TreeDataProvider(storageHandler, myEventHandler)
-      resolve(true)
-    } catch (_err) {
-      console.log(_err)
-      reject(_err)
-    }
-  })
-}
-
-/**
- *
- */
-function loadData(sortBy) {
-  return new Promise((resolve, reject) => {
-    try {
-      dataProvider.loadData(sortBy).then((jsonResult) => {
-        if (!jsonResult) {
-          jsonResult = defaultJson
-        }
-        resolve(jsonResult)
-      })
-    } catch (_err) {
-      console.log(_err)
-      reject(_err)
-    }
-  })
-}
-
-/**
- *
- */
-function initialiseEventListeners() {
-  return new Promise((resolve, reject) => {
-    try {
-      myEventHandler.on("environment-initialised", function () {
-        // log(`environment-initialised:`)
-      })
-
-      myEventHandler.on("data-loaded", function () {
-        // log(`data-loaded:`)
-      })
-
-      myEventHandler.on("tree-initialised", function (args) {
-        // if (args) {
-        //   if (args.json) {
-        //     log("Have json")
-        //   }
-        //   if (args.tree) {
-        //     log("Have tree")
-        //   }
-        // }
-      })
-
-      myEventHandler.on("journey-added", function (payload) {
-        // if (payload && payload.journey && payload.journey.identifier) {
-        //   notify(
-        //     "journey_created_" + payload.journey.identifier,
-        //     `New Journey: ${payload.journey.name}`
-        //   )
-        // }
-      })
-
-      myEventHandler.on("waypoint-focused", function (payload) {
-        if (payload && myWorkspaceHandler) {
-          myWorkspaceHandler.openWaypointFile([payload])
-        }
-      })
-
-      myEventHandler.on("save-complete", function (payload) {
-        // log("save-complete")
-      })
-
-      resolve(true)
-    } catch (_err) {
-      reject(_err)
-    }
-  })
-}
-
-/**
- * Register configuration listeners.
- */
-function registerConfigListeners() {
-  return new Promise((resolve, reject) => {
-    try {
-      // nova.config.onDidChange(configKeys.enabled, updateEnabled, "enabled")
-      nova.workspace.config.onDidChange(
-        configKeys.enabled,
-        updateEnabled,
-        "enabled"
-      )
-      resolve(true)
-    } catch (_err) {
+      log("Error 24")
+      log(_err)
       reject(_err)
     }
   })
@@ -803,13 +756,13 @@ function registerEditorListeners() {
             if (newURI !== oldURI) {
               // TODO - this is not being called when renaming in filepanel or finder?
               log("FILENAME CHANGED")
-              dataProvider.updateFilename(newURI, oldURI).then((res) => {
-                dataProvider.save().then(() => {
-                  exports.load().then((res) => {
-                    exports.launch()
-                  })
-                })
-              })
+              // dataProvider.updateFilename(newURI, oldURI).then((res) => {
+              //   dataProvider.save().then(() => {
+              //     exports.load().then((res) => {
+              //       exports.launch()
+              //     })
+              //   })
+              // })
               // TODO: Update filename in waypoints file.
               // if (!findDocumentByURI(oldURI)) {}
             }
@@ -820,6 +773,119 @@ function registerEditorListeners() {
 
       resolve(true)
     } catch (_err) {
+      log("Error 25")
+      log(_err)
+      reject(_err)
+    }
+  })
+}
+
+/**
+ *
+ */
+function initialiseEventListeners() {
+  return new Promise((resolve, reject) => {
+    try {
+      // Comment these out until they are atually used.
+
+      // myEventHandler.on("environment-initialised", function () {
+      //   log(`environment-initialised:`)
+      // })
+
+      // myEventHandler.on("data-loaded", function () {
+      //   log(`data-loaded:`)
+      // })
+
+      // myEventHandler.on("tree-initialised", function (args) {
+      //   log(`tree-initialised:`)
+      //   // if (args) {
+      //   //   if (args.json) {
+      //   //     log("Have json")
+      //   //   }
+      //   //   if (args.tree) {
+      //   //     log("Have tree")
+      //   //   }
+      //   // }
+      // })
+
+      myEventHandler.on("journey-added", function (payload) {
+        if (payload && payload.journey && payload.journey.identifier) {
+          notify(
+            "journey_created_" + payload.journey.identifier,
+            `New Journey: ${payload.journey.name}`
+          )
+        }
+      })
+
+      myEventHandler.on("waypoint-focused", function (payload) {
+        if (payload && myWorkspaceHandler) {
+          myWorkspaceHandler.openWaypointFile([payload])
+        }
+      })
+
+      // myEventHandler.on("save-complete", function (payload) {
+      //   log("save-complete")
+      // })
+
+      // TODO: If user deletes their .nova folder, then destroy the in memory tree data.
+      // myEventHandler.on("reset-data", function (payload) {
+      //   log("reset-data")
+      // })
+
+      resolve(true)
+    } catch (_err) {
+      log("Error 26")
+      log(_err)
+      reject(_err)
+    }
+  })
+}
+
+/**
+ *
+ */
+function initialiseTreeDataProvider(storageHandler) {
+  return new Promise((resolve, reject) => {
+    try {
+      dataProvider = new TreeDataProvider(storageHandler, myEventHandler)
+      resolve(true)
+    } catch (_err) {
+      log("Error 27")
+      log(_err)
+      reject(_err)
+    }
+  })
+}
+
+/**
+ *
+ */
+function loadData(sortBy) {
+  return new Promise((resolve, reject) => {
+    try {
+      if (!dataProvider) {
+        log("Error 28")
+        log("Missing dataProvider")
+        // return false
+        reject(false)
+      }
+
+      dataProvider
+        .loadData(sortBy)
+        .then((jsonResult) => {
+          if (!jsonResult) {
+            jsonResult = defaultJson
+          }
+          resolve(jsonResult)
+        })
+        .catch((_err) => {
+          log("Error 29 - recover with default json.")
+          log(_err)
+          resolve(defaultJson)
+        })
+    } catch (_err) {
+      log("Error 30")
+      log(_err)
       reject(_err)
     }
   })
@@ -827,17 +893,25 @@ function registerEditorListeners() {
 
 exports.activate = async function () {
   return Promise.all([updateConfig(), registerConfigListeners()])
-    .then((promiseResults) => {
+    .then(() => {
       if (!getLocalConfig(configKeys.enabled)) {
-        if (nova.inDevMode) {
+        if (nova.inDevMode()) {
           log("Waypoint is disabled.")
         }
         return false
       } else {
-        exports.initialise(promiseResults)
+        state.activated = true
+        exports.initialise()
       }
     })
     .catch((_e) => {
+      state.activated = false
+
+      if (nova.inDevMode()) {
+        log("ACTIVATION ERROR! Error 31")
+        log(_e)
+      }
+
       if (!state.activationErrorHandled) {
         myEventHandler.emit("activation-error", {
           message: _e,
@@ -845,15 +919,9 @@ exports.activate = async function () {
 
         if (!nova.inDevMode()) {
           const msg = nova.localize(`${ext.prefixMessage()}.activation-error`)
-          // nova.workspace.showErrorMessage(msg)
           notify("activation_err", msg)
           state.activationErrorHandled = true
         }
-      }
-
-      if (nova.inDevMode()) {
-        console.log("ACTIVATION ERROR!")
-        console.log(_e)
       }
 
       reject(false)
@@ -863,41 +931,42 @@ exports.activate = async function () {
 exports.initialise = async function () {
   return Promise.all([
     ensureWorkspace(),
-    ensureProject(),
     initialiseWorkspaceHandler(),
     initialiseStorageHandler(),
     initialiseEmitHandler(),
     registerCommands(),
     registerEditorListeners(),
     initialiseEventListeners(),
-    myStorageHandler.initWaypointFile(),
-    initialiseTreeDataProvider(myStorageHandler),
   ])
     .then((promiseResults) => {
       myEventHandler.emit("environment-initialised")
-      exports.load().then((res) => {
-        exports.launch()
-      })
+      state.initialised = true
+    })
+    .then(() => {
+      initialiseTreeDataProvider(myStorageHandler)
+        .then(exports.load())
+        .then((result) => {
+          exports.launch()
+        })
     })
     .catch((_e) => {
+      state.initialised = false
+      if (nova.inDevMode()) {
+        log("INITIALISATION ERROR! Error 32")
+        log(_e)
+      }
       if (!state.initialisationErrorHandled) {
         myEventHandler.emit("initialisation-error", {
           message: _e,
         })
 
         if (!nova.inDevMode()) {
-          const msg = nova.localize(
-            `${ext.prefixMessage()}.initialisation-error`
+          notify(
+            "initialisation_err",
+            nova.localize(`${ext.prefixMessage()}.initialisation-error`)
           )
-          // nova.workspace.showErrorMessage(msg)
-          notify("initialisation_err", msg)
           state.initialisationErrorHandled = true
         }
-      }
-
-      if (nova.inDevMode()) {
-        console.log("INITIALISATION ERROR!")
-        console.log(_e)
       }
     })
 }
@@ -908,26 +977,29 @@ exports.load = async function () {
       .then((json) => {
         myEventHandler.emit("data-loaded")
         dataProvider.initData(json).then((jsonResult) => {
+          state.loaded = true
           resolve(jsonResult)
         })
       })
       .catch((_e) => {
+        state.loaded = false
+        if (nova.inDevMode()) {
+          log("LOAD ERROR! Error 33")
+          log(_e)
+        }
+
         if (!state.loadErrorHandled) {
           myEventHandler.emit("load-error", {
             message: _e,
           })
 
           if (!nova.inDevMode()) {
-            const msg = nova.localize(`${ext.prefixMessage()}.load-error`)
-            // nova.workspace.showErrorMessage(msg)
-            notify("load_err", msg)
+            notify(
+              "load_err",
+              nova.localize(`${ext.prefixMessage()}.load-error`)
+            )
             state.loadErrorHandled = true
           }
-        }
-
-        if (nova.inDevMode()) {
-          console.log("LOAD ERROR!")
-          console.log(_e)
         }
 
         reject(false)
@@ -938,39 +1010,56 @@ exports.load = async function () {
 exports.launch = async function () {
   return new Promise((resolve, reject) => {
     let json = dataProvider.getJson()
+    // log(JSON.stringify(json))
     dataProvider
       .extractStoredFiles(json)
       .then((filesInStorageFile) => {
         dataProvider.setStoredFiles(filesInStorageFile)
         dataProvider.getOpenEditorFiles().then((storeFilesThatAreOpen) => {
           dataProvider.setOpenStoredFiles(storeFilesThatAreOpen)
-          exports.subscribe().then((tree) => {
-            let subscribeData = {
-              // json: json,
-              // tree: tree,
-            }
-            myEventHandler.emit("tree-initialised", subscribeData)
-            resolve(json)
-          })
+
+          state.launched = true
+          if (!state.subscribed || !treeView) {
+            exports
+              .subscribe()
+              .then((tree) => {
+                let subscribeData = {
+                  // json: json,
+                  // tree: tree,
+                }
+                myEventHandler.emit("tree-initialised", subscribeData)
+                resolve(json)
+              })
+              .catch((_err) => {
+                log("Error 34")
+                log(_err)
+              })
+          } else {
+            // TODO: Target the exact node to improve performance.
+            treeView.reload()
+          }
         })
       })
       .catch((_e) => {
+        state.launched = false
+
+        if (nova.inDevMode()) {
+          log("LAUNCH ERROR! Error 35")
+          log(_e)
+        }
+
         if (!state.launchErrorHandled) {
           myEventHandler.emit("launch-error", {
             message: _e,
           })
 
           if (!nova.inDevMode()) {
-            const msg = nova.localize(`${ext.prefixMessage()}.launch-error`)
-            // nova.workspace.showErrorMessage(msg)
-            notify("launch_err", msg)
+            notify(
+              "launch_err",
+              nova.localize(`${ext.prefixMessage()}.launch-error`)
+            )
             state.launchErrorHandled = true
           }
-        }
-
-        if (nova.inDevMode()) {
-          console.log("LAUNCH ERROR!")
-          console.log(_e)
         }
 
         reject(false)
@@ -985,10 +1074,30 @@ exports.subscribe = async function () {
         dataProvider: dataProvider,
       })
       nova.subscriptions.add(treeView)
+      state.subscribed = true
+
+      // treeView.onDidChangeSelection((selection) => {
+      //   console.log("New selection: " + selection.map((e) => e.name))
+      // })
+
+      // treeView.onDidExpandElement((element) => {
+      //   console.log("Expanded: " + element.name)
+      // })
+
+      // treeView.onDidCollapseElement((element) => {
+      //   console.log("Collapsed: " + element.name)
+      // })
+
+      // TODO: When does this trigger?
+      // treeView.onDidChangeVisibility(() => {
+      //   console.log("Visibility Changed")
+      // })
+
       resolve(treeView)
     } catch (_e) {
-      console.log("SUBSCRIBE ERROR!")
-      console.log(_e)
+      state.subscribed = false
+      log("SUBSCRIBE ERROR! Error 36")
+      log(_e)
 
       if (!state.subscribeErrorHandled) {
         myEventHandler.emit("subscribe-error", {
@@ -1003,11 +1112,6 @@ exports.subscribe = async function () {
         }
       }
 
-      if (nova.inDevMode()) {
-        log("SUBSCRIBE ERROR!")
-        console.log(_e)
-      }
-
       reject(_e)
     }
   })
@@ -1016,4 +1120,9 @@ exports.subscribe = async function () {
 exports.deactivate = function () {
   treeView = null
   dataProvider = null
+  myWorkspaceHandler = null
+  myStorageHandler = null
+  myEventHandler = null
+  activeJourney = null
+  stashedName = null
 }
