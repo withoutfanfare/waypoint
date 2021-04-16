@@ -25,7 +25,7 @@ const {
   getLineFromEditorSelected,
 } = require("./lib/document")
 
-const { templateJson } = require("./lib/defaults")
+const { defaultJson } = require("./lib/defaults")
 const { WaypointItem } = require("./WaypointItem.js")
 
 module.exports.TreeDataProvider = class TreeDataProvider {
@@ -37,6 +37,8 @@ module.exports.TreeDataProvider = class TreeDataProvider {
     this.storedFiles = []
     this.waypointIds = []
     this.openStoredFiles = []
+
+    this.defaultJson = defaultJson
 
     // TODO - decorate on activation
     // this.eventHandler.on("journey-activated", function (payload) {
@@ -67,22 +69,15 @@ module.exports.TreeDataProvider = class TreeDataProvider {
    */
   loadData(sortBy) {
     return new Promise((resolve, reject) => {
-      try {
-        this.sortBy = sortBy
-        this.storage
-          .getJson()
-          .then((json) => {
-            if (!json) {
-              json = templateJson
-            }
-            resolve(json)
-          })
-          .catch((message) => {
-            reject(message)
-          })
-      } catch (error) {
-        reject(error)
-      }
+      this.sortBy = sortBy
+      this.storage
+        .getJson()
+        .catch((_err) => {
+          return defaultJson
+        })
+        .then((json) => {
+          resolve(json)
+        })
     })
   }
 
@@ -92,13 +87,21 @@ module.exports.TreeDataProvider = class TreeDataProvider {
         this.setJson(json)
         this.setRootItems(this.jsonToTreeStructure(json))
         let aJName = json && json.activeJourney ? json.activeJourney : null
-        this.setActiveJourney(aJName).then((journey) => {
-          if (journey) {
-          }
-          resolve(json)
-        })
-      } catch (error) {
-        reject(error)
+        this.setActiveJourney(aJName)
+          .then((journey) => {
+            if (journey) {
+            }
+            resolve(json)
+          })
+          .catch((_err) => {
+            log("TreeDataProvider ERROR! Error 50")
+            log(_err)
+            reject(_err)
+          })
+      } catch (_err) {
+        log("TreeDataProvider ERROR! Error 49")
+        log(_err)
+        reject(_err)
       }
     })
   }
@@ -107,8 +110,10 @@ module.exports.TreeDataProvider = class TreeDataProvider {
     return new Promise((resolve, reject) => {
       try {
         resolve(this.getJson())
-      } catch (error) {
-        reject(error)
+      } catch (_err) {
+        log("TreeDataProvider ERROR! Error 51")
+        log(_err)
+        reject(_err)
       }
     })
   }
@@ -179,6 +184,8 @@ module.exports.TreeDataProvider = class TreeDataProvider {
         files = filterDuplicates(files)
         resolve(files)
       } catch (_err) {
+        log("TreeDataProvider ERROR! Error 52")
+        log(_err)
         reject(_err)
       }
     })
@@ -187,18 +194,26 @@ module.exports.TreeDataProvider = class TreeDataProvider {
   getOpenEditorFiles() {
     return new Promise((resolve, reject) => {
       try {
-        getOpenDocumentsRootItems().then((items) => {
-          const storedFiles = this.getStoredFiles()
-          if (storedFiles && storedFiles.length && items && items.length) {
-            let files = items.filter((el) => {
-              return storedFiles.includes(el)
-            })
-            resolve(files)
-          } else {
-            resolve([])
-          }
-        })
+        getOpenDocumentsRootItems()
+          .then((items) => {
+            const storedFiles = this.getStoredFiles()
+            if (storedFiles && storedFiles.length && items && items.length) {
+              let files = items.filter((el) => {
+                return storedFiles.includes(el)
+              })
+              resolve(files)
+            } else {
+              resolve([])
+            }
+          })
+          .catch((_err) => {
+            log("TreeDataProvider ERROR! Error 54")
+            log(_err)
+            reject(_err)
+          })
       } catch (_err) {
+        log("TreeDataProvider ERROR! Error 53")
+        log(_err)
         reject(_err)
       }
     })
@@ -227,7 +242,9 @@ module.exports.TreeDataProvider = class TreeDataProvider {
     try {
       return element.parent
     } catch (_err) {
+      log("TreeDataProvider ERROR! Error 53")
       log(_err)
+      return false
     }
   }
 
@@ -424,6 +441,7 @@ module.exports.TreeDataProvider = class TreeDataProvider {
         resolve(this.activeJourney)
       } catch (_err) {
         this.activeJourney = false
+        log("TreeDataProvider ERROR! Error 56")
         log(_err)
         reject(_err)
       }
@@ -490,17 +508,21 @@ module.exports.TreeDataProvider = class TreeDataProvider {
 
       if (!jsonObj) {
         const msg = nova.localize(`${ext.prefixMessage()}.empty-json-error`)
+        log("TreeDataProvider ERROR! Error 57")
+        log(msg)
         reject(msg)
       }
 
       let jsonString = JSON.stringify(jsonObj)
       if (!jsonString) {
         const msg = nova.localize(`${ext.prefixMessage()}.convert-json-error`)
+        log("TreeDataProvider ERROR! Error 58")
+        log(msg)
         reject(msg)
       }
 
       jsonString = jsonString
-        .replace(/\\n/g, "\\n")
+        // .replace(/\\n/g, "\\n")
         .replace(/\\'/g, "\\'")
         .replace(/\\"/g, '\\"')
         .replace(/\\&/g, "\\&")
@@ -510,21 +532,13 @@ module.exports.TreeDataProvider = class TreeDataProvider {
         .replace(/\\f/g, "\\f")
 
       this.storage
-        .writeJson(jsonString)
-        .then((payload) => {
-          this.storage
-            .swapTmpJsonToActual()
-            .then(() => {
-              this.eventHandler.emit("data-saved")
-              resolve(true)
-            })
-            .catch((_err) => {
-              reject(_err)
-            })
+        .save(jsonString)
+        .then((res) => {
+          this.eventHandler.emit("data-saved")
+          resolve(res)
         })
         .catch((_err) => {
-          log(_err)
-          reject(_err)
+          reject(false)
         })
     })
   }
@@ -583,7 +597,7 @@ module.exports.TreeDataProvider = class TreeDataProvider {
     return new Promise((resolve, reject) => {
       try {
         if (!this.rootItems || !this.rootItems.length) {
-          console.log("E4")
+          log("TreeDataProvider ERROR! Error 61")
           reject(false)
         }
 
@@ -592,6 +606,7 @@ module.exports.TreeDataProvider = class TreeDataProvider {
           oldName = oldName.trim()
           index = this.rootItems.findIndex((i) => i.name === oldName)
         } else {
+          log("TreeDataProvider ERROR! Error 62")
           reject(false)
         }
 
@@ -602,9 +617,11 @@ module.exports.TreeDataProvider = class TreeDataProvider {
           item.name = newName.trim()
           resolve(newName)
         } else {
+          log("TreeDataProvider ERROR! Error 63")
           reject(false)
         }
       } catch (_err) {
+        log("TreeDataProvider ERROR! Error 64")
         reject(false)
       }
     })
@@ -614,10 +631,13 @@ module.exports.TreeDataProvider = class TreeDataProvider {
     return new Promise((resolve, reject) => {
       try {
         if (!waypointObj || !waypointObj.identifier) {
+          log("TreeDataProvider ERROR! Error 66")
           reject("Waypoint was missing 'identifier'.")
         }
         resolve(waypointObj)
       } catch (_err) {
+        log("TreeDataProvider ERROR! Error 65")
+        log(_err)
         reject(_err)
       }
     })
@@ -681,13 +701,12 @@ module.exports.TreeDataProvider = class TreeDataProvider {
           resolve(journeyName)
         } catch (_err) {
           // TODO - simplify
-          log("E1")
+          log("TreeDataProvider ERROR! Error 67")
           log(_err)
           reject(_err)
         }
       } catch (_err) {
-        // TODO - simplify
-        log("E2")
+        log("TreeDataProvider ERROR! Error 68")
         log(_err)
         reject(_err)
       }
@@ -702,6 +721,7 @@ module.exports.TreeDataProvider = class TreeDataProvider {
 
     return Promise.all(promises)
       .catch(function (err) {
+        log("TreeDataProvider ERROR! Error 69")
         log(err)
         return promises
       })
@@ -730,15 +750,19 @@ module.exports.TreeDataProvider = class TreeDataProvider {
                 resolve(deleteResult)
               })
               .catch((_err) => {
+                log("TreeDataProvider ERROR! Error 72")
                 log(_err)
                 reject(_err)
               })
           })
           .catch((_err) => {
+            log("TreeDataProvider ERROR! Error 70")
             log(_err)
             reject(_err)
           })
       } catch (_err) {
+        log("TreeDataProvider ERROR! Error 71")
+        log(_err)
         reject(_err)
       }
     })
@@ -761,6 +785,8 @@ module.exports.TreeDataProvider = class TreeDataProvider {
 
         resolve(true)
       } catch (_err) {
+        log("TreeDataProvider ERROR! Error 73")
+        log(_err)
         reject(_err)
       }
     })
@@ -786,6 +812,8 @@ module.exports.TreeDataProvider = class TreeDataProvider {
           resolve(activeJourney)
         }
       } catch (_err) {
+        log("TreeDataProvider ERROR! Error 74")
+        log(_err)
         reject(_err)
       }
     })
@@ -801,24 +829,26 @@ module.exports.TreeDataProvider = class TreeDataProvider {
         : EditorOrWorkspace.activeTextEditor
 
       if (!myEditor || !myEditor.document || !myEditor.document.path) {
+        log("TreeDataProvider ERROR! Error 75")
         reject("Please open a document to create a waypoint.")
       }
 
       this.ensureActiveJourney()
         .then((active) => {
           if (!active || !active.name) {
+            log("TreeDataProvider ERROR! Error 76")
             log("Unable to assert active journey.")
             reject("Unable to assert active journey.")
           }
 
           getLineFromEditorSelected(myEditor)
             .then((payload) => {
+              // console.log(JSON.stringify(payload))
               if (!payload || !payload.text || payload.number < 0) {
                 const msg = nova.localize(
                   `${ext.prefixMessage()}.empty-line-error`
                 )
-                notify("save_empty_line_err", msg)
-                reject("Unable to waypoint empty lines")
+                reject(msg)
               }
 
               const currentLine = payload.text
@@ -868,9 +898,13 @@ module.exports.TreeDataProvider = class TreeDataProvider {
 
               let index2 = -1
               if (currentFile.children && currentFile.children.length) {
-                index2 = currentFile.children.findIndex(
-                  (i) => i.line == lineNumber
-                )
+                try {
+                  index2 = currentFile.children.findIndex(
+                    (i) => i.line && i.line == lineNumber
+                  )
+                } catch (_err) {
+                  reject(_err)
+                }
               }
 
               if (index2 < 0) {
@@ -904,13 +938,13 @@ module.exports.TreeDataProvider = class TreeDataProvider {
               }
             })
             .catch((_err) => {
-              log("getLineFromEditorSelected catch")
+              log("TreeDataProvider ERROR! Error 77")
               log(_err)
               reject(_err)
             })
         })
         .catch((_err) => {
-          log("ensureActiveJourney catch")
+          log("TreeDataProvider ERROR! Error 78")
           log(_err)
           reject(_err)
         })

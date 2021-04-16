@@ -66,7 +66,6 @@ environment is a workspace or Nova window without a
 workspace.
 */
 exports.isWorkspace = function isWorkspace() {
-  console.log(`nova.workspace.path ${nova.workspace.path}`)
   if (nova.workspace.path == undefined || nova.workspace.path == null) {
     return false
   } else {
@@ -222,4 +221,16 @@ exports.getOpenDocumentsRootItems = function getOpenDocumentsRootItems(node) {
       reject(_err)
     }
   })
+}
+
+exports.debounce = function debounce(fn, delay) {
+  var timeoutID = null
+  return function () {
+    clearTimeout(timeoutID)
+    var args = arguments
+    var that = this
+    timeoutID = setTimeout(function () {
+      fn.apply(that, args)
+    }, delay)
+  }
 }

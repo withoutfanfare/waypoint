@@ -13,6 +13,7 @@
 - Improve "line realignent" mechanism
 - Drag and drop Waypoints into other Journeys
 - If user deletes their .nova folder, then destroy the in memory tree data
+- Set sensible limits on name string length
 
 # Features
 

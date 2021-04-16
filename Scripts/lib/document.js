@@ -67,12 +67,33 @@ exports.getLineFromRange = function (document, range) {
   return lines.length + 1
 }
 
+exports.countSubstring = function (str, subStr) {
+  var matches = str.match(new RegExp(subStr, "g"))
+  return matches ? matches.length : 0
+}
+
 exports.getLineFromEditorSelected = function (myEditor) {
   return new Promise((resolve, reject) => {
     try {
       const selectedRange = myEditor.selectedRange
       const lineRange = myEditor.getLineRangeForRange(selectedRange)
       const currentLine = myEditor.getTextInRange(lineRange).trim()
+
+      if (!currentLine || currentLine == "" || currentLine == "\n") {
+        reject("Failed! LINE WAS EMPTY")
+      }
+
+      // Is this line unique?
+      // If not, then we need to bail because we can't ensure that the line number can be
+      // successfully realigned.
+      let t = exports.getDocumentText(myEditor)
+      let scanned = exports.countSubstring(
+        exports.getDocumentText(myEditor),
+        currentLine
+      )
+      if (scanned > 1) {
+        reject("Failed! LINE IS NOT UNIQUE")
+      }
 
       let lineNumber = exports.getLineFromRange(
         myEditor,

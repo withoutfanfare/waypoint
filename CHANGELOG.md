@@ -1,3 +1,7 @@
+## Version 1.0.5
+
+- Prevent waypoints being created if the line appears in the file multiple times.
+
 ## Version 1.0.4
 
 Non Nova Project Workspace support (i.e ad-hoc folders)

@@ -6,8 +6,7 @@
   "repository": "https://github.com/withoutfanfare/waypoint",
   "bugs": "https://github.com/withoutfanfare/waypoint/issues",
   "min_runtime": "4.1",
-  "license": "MIT",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "categories": ["sidebars"],
 
   "main": "main.js",
@@ -72,14 +71,6 @@
         "title": "Waypoint: Select Waypoint in Active Journey",
         "command": "waypoint.cmd.selectWaypoint",
         "shortcut": "ctrl-opt-cmd-'"
-      }
-    ],
-    "editor": [
-      {
-        "title": "Waypoint: Toggle Waypoint",
-        "command": "waypoint.cmd.createWaypoint",
-        "when": "editorHasFocus",
-        "shortcut": "ctrl-opt-cmd-m"
       }
     ]
   },

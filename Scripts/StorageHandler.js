@@ -7,7 +7,12 @@
  * Command Handler
  */
 const ext = require("./lib/extension")
-const { log, getLocalConfig, notify } = require("./lib/utils")
+const {
+  log,
+  getLocalConfig,
+  notify,
+  ensureNovaFolderExists,
+} = require("./lib/utils")
 
 class StorageHandler {
   constructor(config = {}) {
@@ -15,6 +20,39 @@ class StorageHandler {
     this.waypointFilePath =
       nova.workspace.path + "/.nova/" + this.config.filename
     this.waypointTempFilePath = ext.tmpDir() + "/" + this.config.filename
+    this.fileInitialised = false
+  }
+
+  save(jsonString) {
+    // log("StorageHandler save")
+    // log(jsonString)
+    return new Promise((resolve, reject) => {
+      if (!jsonString) {
+        log("STORAGE ERROR! save has no json string")
+        reject("STORAGE ERROR! save has no json string")
+      }
+
+      this.write(jsonString)
+      if (nova.fs.open(this.waypointTempFilePath, "r")) {
+        this.fileInitialised = true
+        this.swapTmpJsonToActual().then((res) => {
+          resolve(true)
+        })
+      } else {
+        reject(false)
+      }
+    })
+  }
+
+  write(dataString) {
+    // log(`write to temp ${this.waypointTempFilePath}`)
+    const storageFile = nova.fs.open(this.waypointTempFilePath, "w+")
+    if (storageFile) {
+      storageFile.write(dataString)
+      return true
+    } else {
+      return false
+    }
   }
 
   getWorkspaceFile() {
@@ -29,6 +67,7 @@ class StorageHandler {
     return new Promise((resolve, reject) => {
       try {
         this.storageFile = nova.fs.open(this.waypointFilePath, mode)
+        this.fileInitialised = true
         resolve(this.storageFile)
       } catch (_err) {
         log("STORAGE ERROR! Error 37")
@@ -44,23 +83,31 @@ class StorageHandler {
    */
   swapTmpJsonToActual() {
     return new Promise((resolve, reject) => {
-      this.backupWaypointFile()
-        .then((message) => {
-          let removed = nova.fs.remove(this.waypointFilePath)
-          nova.fs.copy(this.waypointTempFilePath, this.waypointFilePath)
-          this.clearBackupWaypointFile()
-          resolve(true)
+      this.initWaypointFile()
+        .then((res) => {
+          this.backupWaypointFile()
+            .then((message) => {
+              let removed = nova.fs.remove(this.waypointFilePath)
+              nova.fs.copy(this.waypointTempFilePath, this.waypointFilePath)
+              this.clearBackupWaypointFile()
+              resolve(true)
+            })
+            .catch((_err) => {
+              log("STORAGE ERROR! Error 38")
+              // TODO: Notify the user about this instead and give instructions to resolve manually?
+              // this.restoreBackupWaypointFile()
+              // this.clearBackupWaypointFile()
+              // resolve(_err)
+              let msg =
+                "Error interacting with waypoint backup file - please review the .nova folder."
+              notify("backup_waypoint_file_error", msg)
+              reject(_err)
+            })
         })
         .catch((_err) => {
-          log("STORAGE ERROR! Error 38")
-          // TODO: Notify the user about this instead and give instructions to resolve manually?
-          this.restoreBackupWaypointFile()
-          this.clearBackupWaypointFile()
-          resolve(_err)
-
-          // let msg = "Error interacting with waypoint backup file - please review the .nova folder."
-          // notify('backup_waypoint_file_error', msg)
-          // reject(_err)
+          log("STORAGE ERROR! Error 48")
+          log(_err)
+          reject(_err)
         })
     })
   }
@@ -159,6 +206,14 @@ class StorageHandler {
    * @param string - file path
    */
   writeJson(dataString) {
+    return new Promise((resolve, reject) => {})
+  }
+
+  /**
+   * summary
+   * @param string - file path
+   */
+  writeJsonSafe(dataString) {
     return new Promise((resolve, reject) => {
       try {
         if (
@@ -168,16 +223,19 @@ class StorageHandler {
         ) {
           resolve(false)
         }
-        // Open tmp file and truncate first.
-        const storageFile = nova.fs.open(this.waypointTempFilePath, "w+")
-        if (storageFile) {
-          storageFile.write(dataString)
-          resolve(dataString)
-        } else {
-          log("STORAGE ERROR! Error 44")
-          log("Unable to write json file.")
-          reject("Unable to write json file.")
-        }
+
+        ensureNovaFolderExists().then((res) => {
+          // Open tmp file and truncate first.
+          const storageFile = nova.fs.open(this.waypointTempFilePath, "w+")
+          if (storageFile) {
+            storageFile.write(dataString)
+            resolve(dataString)
+          } else {
+            log("STORAGE ERROR! Error 44")
+            log("Unable to write json file.")
+            reject("Unable to write json file.")
+          }
+        })
       } catch (_err) {
         log("STORAGE ERROR! Error 45")
         log(_err)

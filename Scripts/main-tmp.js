@@ -1,4 +1,3 @@
-"use strict"
 /**
  *
  * Nova: Waypoint - main.js
@@ -10,10 +9,8 @@
  *
  */
 
-const EXT = require("./lib/extension")
-const BASE = require("./lib/base")
-const CMDS = require("./core/commands")
-const { findValues } = require("./lib/helper")
+const ext = require("./lib/extension")
+const base = require("./lib/base")
 
 const {
   log,
@@ -23,7 +20,6 @@ const {
   findByAttributeRecursive,
   ensureNovaFolderExists,
   ensureWorkspace,
-  debounce,
 } = require("./lib/utils")
 
 const {
@@ -34,13 +30,15 @@ const {
   getLineFromRange,
 } = require("./lib/document")
 
+const { findValues } = require("./lib/helper")
+
+const cmds = require("./core/commands")
+
 const StorageHandler = require("./StorageHandler.js")
-
 const WorkspaceHandler = require("./WorkspaceHandler.js")
-
 const { TreeDataProvider } = require("./TreeDataProvider.js")
 
-let treeView,
+var treeView,
   dataProvider,
   myWorkspaceHandler,
   myStorageHandler,
@@ -48,52 +46,32 @@ let treeView,
   activeJourney,
   stashedName = null
 
-/**
- * Carousel index for waypoints.
- * @property {number}
- */
-let focusedWaypointIndex = 0
-
-/**
- * Timer for launch method.
- * @property {number}
- */
-let launchTimeout = 0
+var isInitialised = false
+var focusedWaypointIndex = 0
 
 /**
  * Configuration keys.
- * @property {object}
+ * @property {boolean} enabled - The Enable/Disable workspace option.
  */
-const CONFIGKEYS = {
-  enabled: `${EXT.prefixConfig()}.enabled`,
+const configKeys = {
+  enabled: `${ext.prefixConfig()}.enabled`,
 }
 
 /**
  * Extension state.
- * @property {object}
+ * @property {boolean} activationErrorHandled - Has an activation error been handled already?
  */
-let state = Object.assign({}, BASE.state())
+var state = Object.assign({}, base.state())
+var defaultJson = Object.assign({}, base.json())
+var defaultSortBy = base.sortBy()
+var defaultMarkerFilename = base.markerFilename()
+
+// log(JSON.stringify(defaultJson))
+// log(defaultSortBy)
+// log(defaultMarkerFilename)
 
 /**
- * Default json structure.
- * @property {object}
- */
-const defaultJson = Object.assign({}, BASE.json())
-
-/**
- * Sorting.
- * @property {string}
- */
-const defaultSortBy = BASE.sortBy()
-
-/**
- * Marker file.
- * @property {string}
- */
-const defaultMarkerFilename = BASE.markerFilename()
-
-/**
- * Initialise WorkspaceHandler.
+ *
  */
 function initialiseWorkspaceHandler() {
   return new Promise((resolve, reject) => {
@@ -164,21 +142,21 @@ function initialiseTreeDataProvider(storageHandler) {
 function registerCommands() {
   return new Promise((resolve, reject) => {
     try {
-      const prefix = EXT.prefixCommand()
+      const prefix = ext.prefixCommand()
 
       /**
        * Reload the data from file and refresh interface.
        */
-      nova.commands.register(`${EXT.prefixCommand()}.refresh`, () => {
+      nova.commands.register(`${ext.prefixCommand()}.refresh`, () => {
         exports.load().then((res) => {
-          myEventHandler.emit("request-launch")
+          exports.launch()
         })
       })
 
       /**
        * Open file to ActiveEditor at the marked line.
        */
-      nova.commands.register(`${EXT.prefixCommand()}.doubleClick`, () => {
+      nova.commands.register(`${ext.prefixCommand()}.doubleClick`, () => {
         treeView.selection.forEach((obj) => {
           myWorkspaceHandler.openWaypointFile(treeView.selection)
         })
@@ -187,16 +165,25 @@ function registerCommands() {
       /**
        * Set a Journey as Active.
        */
-      nova.commands.register(`${EXT.prefixCommand()}.activateJourney`, () => {
+      nova.commands.register(`${ext.prefixCommand()}.activateJourney`, () => {
         let sname = treeView.selection
           ? treeView.selection.map((e) => e.name)[0]
           : false
 
         try {
           if (sname) {
-            dataProvider.setActiveJourney(sname).then((res) => {
-              save()
-            })
+            dataProvider.setActiveJourney(sname)
+            dataProvider
+              .save()
+              .then(() => {
+                exports.load().then((res) => {
+                  exports.launch()
+                })
+              })
+              .catch((_err) => {
+                log("Error 18")
+                log(_err)
+              })
           }
         } catch (_err) {
           log("Error 19")
@@ -207,10 +194,10 @@ function registerCommands() {
       /**
        * Add new Journey
        */
-      nova.commands.register(`${EXT.prefixCommand()}.addJourney`, () => {
-        const msg = nova.localize(`${EXT.prefixMessage()}.enter-journey-name`)
+      nova.commands.register(`${ext.prefixCommand()}.addJourney`, () => {
+        const msg = nova.localize(`${ext.prefixMessage()}.enter-journey-name`)
         const msg2 = nova.localize(
-          `${EXT.prefixMessage()}.enter-journey-placeholder`
+          `${ext.prefixMessage()}.enter-journey-placeholder`
         )
         nova.workspace.showInputPalette(
           msg,
@@ -224,7 +211,7 @@ function registerCommands() {
       /**
        * Select a File and Waypoint
        */
-      nova.commands.register(`${EXT.prefixCommand()}.selectWaypoint`, () => {
+      nova.commands.register(`${ext.prefixCommand()}.selectWaypoint`, () => {
         try {
           let active = dataProvider.getActiveJourney()
           chooseFile(active)
@@ -238,19 +225,17 @@ function registerCommands() {
       /**
        * Select Journey
        */
-      nova.commands.register(`${EXT.prefixCommand()}.selectJourney`, () => {
+      nova.commands.register(`${ext.prefixCommand()}.selectJourney`, () => {
         chooseJourney()
       })
 
       /**
        * Rename Journey.
        */
-      nova.commands.register(`${EXT.prefixCommand()}.rename`, () => {
+      nova.commands.register(`${ext.prefixCommand()}.rename`, () => {
         if (treeView.selection) {
-          const msg = nova.localize(`${EXT.prefixMessage()}.new-journey-name`)
-          const msg2 = nova.localize(
-            `${EXT.prefixMessage()}.new-journey-placeholder`
-          )
+          const msg = nova.localize(`${ext.prefixMessage()}.new-journey-name`)
+          const msg2 = nova.localize(`${ext.prefixMessage()}.new-journey-name`)
           stashedName = treeView.selection[0].name
           nova.workspace.showInputPalette(
             msg,
@@ -265,7 +250,7 @@ function registerCommands() {
       /**
        * Remove one or more waypoints at any depth.
        */
-      nova.commands.register(`${EXT.prefixCommand()}.remove`, () => {
+      nova.commands.register(`${ext.prefixCommand()}.remove`, () => {
         return new Promise((resolve, reject) => {
           const myActiveJourneyName = dataProvider.getActiveJourneyName()
           const deletables = treeView.selection.map((waypointObj) => {
@@ -295,7 +280,7 @@ function registerCommands() {
        * Create a new Waypoint based on the current file and line.
        */
       nova.commands.register(
-        `${EXT.prefixCommand()}.createWaypoint`,
+        `${ext.prefixCommand()}.createWaypoint`,
         (workspace) => {
           dataProvider
             .createWaypoint(workspace)
@@ -311,7 +296,8 @@ function registerCommands() {
             })
             .catch((_err) => {
               log("Error 23")
-              notify("create_waypoint_error", _err)
+              log(_err)
+              notify("file_assertion_error", _err)
               return false
             })
         }
@@ -320,7 +306,7 @@ function registerCommands() {
       /**
        * Open previous Waypoint in editor
        */
-      nova.commands.register(`${EXT.prefixCommand()}.prevWaypoint`, () => {
+      nova.commands.register(`${ext.prefixCommand()}.prevWaypoint`, () => {
         let flatIndexes = dataProvider.getWaypointIds()
         if (!flatIndexes || !flatIndexes.length) {
           return false
@@ -353,7 +339,7 @@ function registerCommands() {
       /**
        * Open next Waypoint in editor
        */
-      nova.commands.register(`${EXT.prefixCommand()}.nextWaypoint`, () => {
+      nova.commands.register(`${ext.prefixCommand()}.nextWaypoint`, () => {
         let flatIndexes = dataProvider.getWaypointIds()
         if (!flatIndexes || !flatIndexes.length) {
           return false
@@ -437,8 +423,6 @@ function handleOpenFileSave(textEditor) {
               let currentLine = waypointNodes[ind].line
               let scanned = scanner.scanUpToString(needle)
 
-              // TODO: is this unique? If not, bail...
-
               if (scanned) {
                 let scannerLoc = scanner.location || 0
                 let needleLength = needle.length || 0
@@ -468,14 +452,15 @@ function handleOpenFileSave(textEditor) {
       }
     }
 
-    save()
-      .then((res) => {
-        myEventHandler.emit("save-complete")
-      })
-      .catch((_err) => {
-        log("Error 15")
-        log(_err)
-      })
+    // TODO - IMPORTANT
+    // save()
+    //   .then((res) => {
+    //     myEventHandler.emit("save-complete")
+    //   })
+    //   .catch((_err) => {
+    //     log("Error 15")
+    //     log(_err)
+    //   })
   }
 }
 
@@ -489,11 +474,13 @@ function registerEditorListeners() {
   return new Promise((resolve, reject) => {
     try {
       nova.workspace.onDidAddTextEditor((added) => {
-        myEventHandler.emit("request-launch")
+        exports.launch()
         added.onDidDestroy((destroyed) => {
           const doc = destroyed.document
           if (documentIsClosed(doc)) {
-            myEventHandler.emit("request-launch")
+            setTimeout(() => {
+              exports.launch()
+            }, 400)
           } else {
             log("NOT documentIsClosed")
             // TODO - Martin documented this - investigate further.
@@ -548,26 +535,36 @@ function registerEditorListeners() {
 function initialiseEventListeners() {
   return new Promise((resolve, reject) => {
     try {
-      // myEventHandler.on("environment-initialised", function () {
-      //   // log(`environment-initialised:`)
-      // })
+      myEventHandler.on("environment-initialised", function () {
+        log(`environment-initialised:`)
+        log(state.initialised)
+        if (!state.initialised) {
+          initialiseTreeDataProvider(myStorageHandler)
+            .then(exports.load())
+            .then((result) => {
+              exports.launch().then((res) => {
+                state.initialised = true
+              })
+            })
+        }
+      })
 
-      // myEventHandler.on("data-loaded", function (json) {
-      //   // log(`data-loaded:`)
-      //   // log(JSON.stringify(json))
-      // })
+      myEventHandler.on("data-loaded", function (json) {
+        log(`data-loaded:`)
+        log(JSON.stringify(json))
+      })
 
-      // myEventHandler.on("tree-initialised", function (args) {
-      //   // log(`tree-initialised:`)
-      //   // if (args) {
-      //   //   if (args.json) {
-      //   //     log("Have json")
-      //   //   }
-      //   //   if (args.tree) {
-      //   //     log("Have tree")
-      //   //   }
-      //   // }
-      // })
+      myEventHandler.on("tree-initialised", function (args) {
+        log(`tree-initialised:`)
+        // if (args) {
+        //   if (args.json) {
+        //     log("Have json")
+        //   }
+        //   if (args.tree) {
+        //     log("Have tree")
+        //   }
+        // }
+      })
 
       myEventHandler.on("journey-added", function (payload) {
         if (payload && payload.journey && payload.journey.identifier) {
@@ -584,13 +581,8 @@ function initialiseEventListeners() {
         }
       })
 
-      // myEventHandler.on("save-complete", function (payload) {
-      //   // log("save-complete")
-      // })
-
-      myEventHandler.on("request-launch", function (payload) {
-        clearTimeout(launchTimeout)
-        launchTimeout = setTimeout(exports.launch, 200)
+      myEventHandler.on("save-complete", function (payload) {
+        log("save-complete")
       })
 
       // TODO: If user deletes their .nova folder, then destroy the in memory tree data.
@@ -611,6 +603,7 @@ function initialiseEventListeners() {
  *
  */
 function loadData(sortBy) {
+  log("main loadData()")
   return new Promise((resolve, reject) => {
     try {
       if (!dataProvider) {
@@ -627,6 +620,8 @@ function loadData(sortBy) {
           return defaultJson
         })
         .then((jsonResult) => {
+          log("loadData catch then")
+          log(JSON.stringify(jsonResult))
           resolve(jsonResult)
         })
     } catch (_err) {
@@ -643,7 +638,7 @@ function chooseJourney() {
     return j.name
   })
 
-  const msg = nova.localize(`${EXT.prefixMessage()}.select-journey`)
+  const msg = nova.localize(`${ext.prefixMessage()}.select-journey`)
   nova.workspace.showChoicePalette(
     journeyArr,
     {
@@ -651,10 +646,24 @@ function chooseJourney() {
     },
     (sname, ind) => {
       dataProvider.setActiveJourney(sname)
-      save().catch((_err) => {
-        log("Error 16")
-        log(_err)
-      })
+      // dataProvider
+      //   .save()
+      save()
+        // .then(() => {
+        //   exports
+        //     .load()
+        //     .then((res) => {
+        //       exports.launch()
+        //     })
+        //     .catch((_err) => {
+        //       log("Error 17")
+        //       log(_err)
+        //     })
+        // })
+        .catch((_err) => {
+          log("Error 16")
+          log(_err)
+        })
     }
   )
 }
@@ -672,7 +681,7 @@ function chooseFile(journey) {
   })
 
   if (files && files.length) {
-    const msg = nova.localize(`${EXT.prefixMessage()}.select-file`)
+    const msg = nova.localize(`${ext.prefixMessage()}.select-file`)
     nova.workspace.showChoicePalette(
       files,
       {
@@ -699,7 +708,7 @@ function chooseWaypoint(file, index) {
   }
 
   if (waypoints && waypoints.length) {
-    const msg = nova.localize(`${EXT.prefixMessage()}.select-waypoint`)
+    const msg = nova.localize(`${ext.prefixMessage()}.select-waypoint`)
     nova.workspace.showChoicePalette(
       waypoints,
       {
@@ -720,18 +729,28 @@ function chooseWaypoint(file, index) {
  * Add a Journey to the tree data and save to file.
  */
 function addJourney(journeyName) {
+  log("MAIN addJourney")
+  log(journeyName)
   if (journeyName == undefined) {
     return false
   }
 
   try {
     dataProvider.addJourney(journeyName.trim())
+    // dataProvider
+    //   .save()
     save()
       .then((payload) => {
+        log("addJourney MAIN save THEN")
         let jn = dataProvider.getActiveJourney()
         myEventHandler.emit("journey-added", {
           journey: jn,
         })
+
+        // exports.load().then((res) => {
+        //   log("main save load THEN")
+        //   exports.launch()
+        // })
       })
       .catch((_err) => {
         log("Error 7")
@@ -741,7 +760,7 @@ function addJourney(journeyName) {
   } catch (_err) {
     log("Error 9")
     log(_err)
-    const msg = nova.localize(`${EXT.prefixMessage()}.add-journey-error`)
+    const msg = nova.localize(`${ext.prefixMessage()}.add-journey-error`)
     notify("journey_created_error", msg)
   }
 }
@@ -763,7 +782,7 @@ function renameJourney(journeyName) {
     .catch((_err) => {
       log("Error 10")
       log(_err)
-      const msg = nova.localize(`${EXT.prefixMessage()}.rename-journey-error`)
+      const msg = nova.localize(`${ext.prefixMessage()}.rename-journey-error`)
       notify("rename_journey-error", msg)
     })
 }
@@ -776,12 +795,15 @@ function save() {
         dataProvider
           .save()
           .then(() => {
+            log("main save THEN")
             exports
               .load()
               .then((res) => {
+                log("MAIN SAVE LOAD THEN")
                 exports
                   .launch()
                   .then((res) => {
+                    log("MAIN SAVE LOAD LAUNCH THEN")
                     resolve(true)
                   })
                   .catch((_err) => {
@@ -813,11 +835,11 @@ function save() {
  */
 exports.activate = async function () {
   return Promise.all([
-    CMDS.updateConfig(EXT.prefixConfig()),
-    CMDS.registerConfigListeners(CONFIGKEYS),
+    cmds.updateConfig(ext.prefixConfig()),
+    cmds.registerConfigListeners(configKeys),
   ])
     .then(() => {
-      if (!getLocalConfig(CONFIGKEYS.enabled)) {
+      if (!getLocalConfig(configKeys.enabled)) {
         if (nova.inDevMode()) {
           log("Waypoint is disabled.")
         }
@@ -841,7 +863,7 @@ exports.activate = async function () {
         })
 
         if (!nova.inDevMode()) {
-          const msg = nova.localize(`${EXT.prefixMessage()}.activation-error`)
+          const msg = nova.localize(`${ext.prefixMessage()}.activation-error`)
           notify("activation_err", msg)
           state.activationErrorHandled = true
         }
@@ -866,18 +888,7 @@ exports.initialise = async function () {
     initialiseEventListeners(),
   ])
     .then(() => {
-      if (!state.initialised) {
-        initialiseTreeDataProvider(myStorageHandler)
-          .then((res) => {
-            state.initialised = true
-            myEventHandler.emit("environment-initialised")
-          })
-          .then((res) => {
-            exports.load().then((json) => {
-              myEventHandler.emit("request-launch")
-            })
-          })
-      }
+      myEventHandler.emit("environment-initialised")
     })
     .catch((_e) => {
       state.initialised = false
@@ -893,7 +904,7 @@ exports.initialise = async function () {
         if (!nova.inDevMode()) {
           notify(
             "initialisation_err",
-            nova.localize(`${EXT.prefixMessage()}.initialisation-error`)
+            nova.localize(`${ext.prefixMessage()}.initialisation-error`)
           )
           state.initialisationErrorHandled = true
         }
@@ -902,9 +913,6 @@ exports.initialise = async function () {
 }
 
 exports.load = async function () {
-  if (!state.initialised) {
-    return false
-  }
   return new Promise((resolve, reject) => {
     loadData(defaultSortBy)
       .then((json) => {
@@ -929,7 +937,7 @@ exports.load = async function () {
           if (!nova.inDevMode()) {
             notify(
               "load_err",
-              nova.localize(`${EXT.prefixMessage()}.load-error`)
+              nova.localize(`${ext.prefixMessage()}.load-error`)
             )
             state.loadErrorHandled = true
           }
@@ -944,13 +952,9 @@ exports.load = async function () {
  * summary
  * @returns {Promise}  - description
  */
-exports.launch = function () {
-  if (!state.loaded) {
-    return false
-  }
-  // TODO debounce this so it calls less.
+exports.launch = async function () {
+  log("launch()")
   return new Promise((resolve, reject) => {
-    // log(`launch() launchTimeout is ${launchTimeout}`)
     let json = dataProvider.getJson()
     dataProvider
       .extractStoredFiles(json)
@@ -961,7 +965,7 @@ exports.launch = function () {
 
           state.launched = true
           if (!state.subscribed) {
-            // log("D1")
+            log("D1")
             exports
               .subscribe()
               .then((tree) => {
@@ -977,6 +981,7 @@ exports.launch = function () {
                 log(_err)
               })
           } else {
+            log("D2")
             // TODO: Target the exact node to improve performance.
             treeView.reload()
             resolve(true)
@@ -999,7 +1004,7 @@ exports.launch = function () {
           if (!nova.inDevMode()) {
             notify(
               "launch_err",
-              nova.localize(`${EXT.prefixMessage()}.launch-error`)
+              nova.localize(`${ext.prefixMessage()}.launch-error`)
             )
             state.launchErrorHandled = true
           }
@@ -1055,7 +1060,7 @@ exports.subscribe = async function () {
         })
 
         if (!nova.inDevMode()) {
-          const msg = nova.localize(`${EXT.prefixMessage()}.subscribe-error`)
+          const msg = nova.localize(`${ext.prefixMessage()}.subscribe-error`)
           // nova.workspace.showErrorMessage(msg)
           notify("subscribe_err", msg)
           state.subscribeErrorHandled = true
@@ -1070,4 +1075,9 @@ exports.subscribe = async function () {
 exports.deactivate = function () {
   treeView = null
   dataProvider = null
+  // myWorkspaceHandler = null
+  // myStorageHandler = null
+  // myEventHandler = null
+  // activeJourney = null
+  // stashedName = null
 }
