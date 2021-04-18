@@ -4,7 +4,7 @@
  */
 const { getId } = require("./lib/utils")
 
-module.exports.WaypointItem = class WaypointItem {
+module.exports.ViewItem = class ViewItem {
   constructor(item) {
     this.identifier = item.identifier || getId()
 
@@ -19,7 +19,7 @@ module.exports.WaypointItem = class WaypointItem {
     this.path = item.path || false
     this.line = item.line || false
     this.updatedAt = item.updated_at || Date.now()
-    this.comment = item.comment
+    this.comment = null
     this.children = []
     this.parent = null
 

@@ -3,7 +3,7 @@
  * @author DannyHarding
  */
 
-const ext = require("./lib/extension")
+const EXT = require("./lib/extension")
 const {
   log,
   notify,
@@ -332,8 +332,8 @@ module.exports.TreeDataProvider = class TreeDataProvider {
       item.color = new Color(ColorFormat.rgb, [0, 0, 0, 1]) // black
     }
 
-    const msg = nova.localize(`${ext.prefixMessage()}.add-waypoint-tooltip`)
-    item.command = `${ext.prefixCommand()}.activateJourney`
+    const msg = nova.localize(`${EXT.prefixMessage()}.add-waypoint-tooltip`)
+    item.command = `${EXT.prefixCommand()}.activateJourney`
     item.image = "__filetype.md" // fallback for Nova < 3?
     item.tooltip = msg
     return item
@@ -346,7 +346,7 @@ module.exports.TreeDataProvider = class TreeDataProvider {
    */
   initFileTreeItem(element, item, isActive = false) {
     item.contextValue = "file"
-    item.command = `${ext.prefixCommand()}.doubleClick`
+    item.command = `${EXT.prefixCommand()}.doubleClick`
     item.color = new Color(ColorFormat.rgb, [0.2, 0.2, 0.2, 1]) // grey
 
     // If the file is open, set as cyan
@@ -372,9 +372,9 @@ module.exports.TreeDataProvider = class TreeDataProvider {
     // But... We need it to be exactly searchable in the documents... Hmmm.
     let substring = element.name.substr(0, 35)
 
-    const msg = nova.localize(`${ext.prefixMessage()}.double-click-prompt`)
+    const msg = nova.localize(`${EXT.prefixMessage()}.double-click-prompt`)
     item.contextValue = "waypoint"
-    item.command = `${ext.prefixCommand()}.doubleClick`
+    item.command = `${EXT.prefixCommand()}.doubleClick`
     item.name = `${substring}`
     item.tooltip = msg + " " + element.line
     item.color = new Color(ColorFormat.rgb, [0.4, 0.4, 0.4, 1]) // grey
@@ -480,8 +480,11 @@ module.exports.TreeDataProvider = class TreeDataProvider {
               let wpc = waypoint.children.sort(sortByFileName)
               wpc.map((mark, k) => {
                 let lineWaypoint = new WaypointItem({
+                  identifier: mark.identifier,
                   name: mark.name,
                   line: mark.line,
+                  comment:
+                    mark.comment && mark.comment !== "" ? mark.comment : false,
                 })
                 fileWaypoint.addChild(lineWaypoint)
                 this.waypointIds.push(lineWaypoint.identifier)
@@ -507,7 +510,7 @@ module.exports.TreeDataProvider = class TreeDataProvider {
       }
 
       if (!jsonObj) {
-        const msg = nova.localize(`${ext.prefixMessage()}.empty-json-error`)
+        const msg = nova.localize(`${EXT.prefixMessage()}.empty-json-error`)
         log("TreeDataProvider ERROR! Error 57")
         log(msg)
         reject(msg)
@@ -515,7 +518,7 @@ module.exports.TreeDataProvider = class TreeDataProvider {
 
       let jsonString = JSON.stringify(jsonObj)
       if (!jsonString) {
-        const msg = nova.localize(`${ext.prefixMessage()}.convert-json-error`)
+        const msg = nova.localize(`${EXT.prefixMessage()}.convert-json-error`)
         log("TreeDataProvider ERROR! Error 58")
         log(msg)
         reject(msg)
@@ -713,6 +716,76 @@ module.exports.TreeDataProvider = class TreeDataProvider {
     })
   }
 
+  // updateWaypoint(waypointObj) {
+  //   return new Promise((resolve, reject) => {
+  //     try {
+  //       let hasDeleted = false
+  //       let journeyIdentifier =
+  //         waypointObj && waypointObj.identifier ? waypointObj.identifier : false
+  //       let journeyName =
+  //         waypointObj && waypointObj.name ? waypointObj.name : false
+  //
+  //       try {
+  //         if (journeyIdentifier && journeyIdentifier !== "") {
+  //           hasDeleted = false
+  //
+  //           if (this.rootItems) {
+  //             let item = findByAttributeRecursive(
+  //               this.rootItems,
+  //               journeyIdentifier,
+  //               "children",
+  //               "identifier",
+  //               true,
+  //               []
+  //             )
+  //
+  //             if (item && item.length && item[0] > -1) {
+  //               if (item.length == 1 && this.rootItems[item[0]]) {
+  //                 hasDeleted = journeyName
+  //                 delete this.rootItems[item[0]]
+  //               }
+  //
+  //               if (
+  //                 item.length == 2 &&
+  //                 this.rootItems[item[0]] &&
+  //                 this.rootItems[item[0]].children[item[1]]
+  //               ) {
+  //                 hasDeleted = journeyName
+  //                 delete this.rootItems[item[0]].children[item[1]]
+  //               }
+  //
+  //               if (
+  //                 item.length == 3 &&
+  //                 this.rootItems[item[0]] &&
+  //                 this.rootItems[item[0]].children[item[1]] &&
+  //                 this.rootItems[item[0]].children[item[1]].children[item[2]]
+  //               ) {
+  //                 hasDeleted = journeyName
+  //                 delete this.rootItems[item[0]].children[item[1]].children[
+  //                   item[2]
+  //                 ]
+  //               }
+  //             }
+  //           }
+  //         }
+  //
+  //         this.eventHandler.emit("node-deleted", journeyName)
+  //
+  //         resolve(journeyName)
+  //       } catch (_err) {
+  //         // TODO - simplify
+  //         log("TreeDataProvider ERROR! Error 67")
+  //         log(_err)
+  //         reject(_err)
+  //       }
+  //     } catch (_err) {
+  //       log("TreeDataProvider ERROR! Error 68")
+  //       log(_err)
+  //       reject(_err)
+  //     }
+  //   })
+  // }
+
   async removeWaypoints(deletables) {
     let promises = []
     deletables.map((waypoint) => {
@@ -846,7 +919,7 @@ module.exports.TreeDataProvider = class TreeDataProvider {
               // console.log(JSON.stringify(payload))
               if (!payload || !payload.text || payload.number < 0) {
                 const msg = nova.localize(
-                  `${ext.prefixMessage()}.empty-line-error`
+                  `${EXT.prefixMessage()}.empty-line-error`
                 )
                 reject(msg)
               }
@@ -879,7 +952,7 @@ module.exports.TreeDataProvider = class TreeDataProvider {
                   path: filenameRelative,
                   uri: myEditor.document.uri,
                   line: false,
-                  comment: "TODO",
+                  comment: false,
                   children: [],
                 })
 
@@ -890,7 +963,7 @@ module.exports.TreeDataProvider = class TreeDataProvider {
 
               if (!currentFile || !currentFile.name) {
                 const msg = nova.localize(
-                  `${ext.prefixMessage()}.empty-file-name`
+                  `${EXT.prefixMessage()}.empty-file-name`
                 )
                 notify("save_file_waypoint_err", msg)
                 reject("Unable to assert active file.")
@@ -914,7 +987,7 @@ module.exports.TreeDataProvider = class TreeDataProvider {
                   uri: false,
                   line: lineNumber,
                   waypoint: true,
-                  comment: "TODO2",
+                  comment: false,
                 })
 
                 currentFile.addChild(currentWaypoint)

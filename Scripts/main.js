@@ -39,13 +39,17 @@ const StorageHandler = require("./StorageHandler.js")
 const WorkspaceHandler = require("./WorkspaceHandler.js")
 
 const { TreeDataProvider } = require("./TreeDataProvider.js")
+const { NodeDataProvider } = require("./NodeDataProvider.js")
 
 let treeView,
   dataProvider,
+  nodeView,
+  nodeDataProvider,
   myWorkspaceHandler,
   myStorageHandler,
   myEventHandler,
   activeJourney,
+  viewedNode,
   stashedName = null
 
 /**
@@ -159,6 +163,22 @@ function initialiseTreeDataProvider(storageHandler) {
 }
 
 /**
+ *
+ */
+function initialiseNodeDataProvider() {
+  return new Promise((resolve, reject) => {
+    try {
+      nodeDataProvider = new NodeDataProvider({})
+      resolve(true)
+    } catch (_err) {
+      log("Error 6.1")
+      log(_err)
+      reject(_err)
+    }
+  })
+}
+
+/**
  * Register the extension Commands.
  */
 function registerCommands() {
@@ -227,6 +247,7 @@ function registerCommands() {
       nova.commands.register(`${EXT.prefixCommand()}.selectWaypoint`, () => {
         try {
           let active = dataProvider.getActiveJourney()
+          myEventHandler.emit("init-node-view", active)
           chooseFile(active)
         } catch (_err) {
           log("Error 20")
@@ -260,6 +281,13 @@ function registerCommands() {
             renameJourney
           )
         }
+      })
+
+      /**
+       * Rename Journey.
+       */
+      nova.commands.register(`${EXT.prefixCommand()}.editcomment`, () => {
+        editComment()
       })
 
       /**
@@ -299,7 +327,10 @@ function registerCommands() {
         (workspace) => {
           dataProvider
             .createWaypoint(workspace)
-            .then(() => {
+            .then((active) => {
+              if (active) {
+                myEventHandler.emit("init-node-view", active)
+              }
               save()
                 .then((res) => {
                   myEventHandler.emit("save-complete")
@@ -580,14 +611,21 @@ function initialiseEventListeners() {
 
       myEventHandler.on("waypoint-focused", function (payload) {
         if (payload && myWorkspaceHandler) {
+          myEventHandler.emit("init-node-view", payload)
           myWorkspaceHandler.openWaypointFile([payload])
         }
       })
 
-      // myEventHandler.on("save-complete", function (payload) {
-      //   // log("save-complete")
-      // })
+      myEventHandler.on("init-node-view", function (payload) {
+        if (payload && payload.identifier && nodeDataProvider) {
+          viewedNode = payload
+          nodeDataProvider.initNode(payload).then((res) => {
+            nodeView.reload()
+          })
+        }
+      })
 
+      // myEventHandler.on("save-complete", function (payload) {})
       myEventHandler.on("request-launch", function (payload) {
         clearTimeout(launchTimeout)
         launchTimeout = setTimeout(exports.launch, 200)
@@ -650,10 +688,12 @@ function chooseJourney() {
       placeholder: msg,
     },
     (sname, ind) => {
-      dataProvider.setActiveJourney(sname)
-      save().catch((_err) => {
-        log("Error 16")
-        log(_err)
+      dataProvider.setActiveJourney(sname).then((res) => {
+        myEventHandler.emit("init-node-view", res)
+        save().catch((_err) => {
+          log("Error 16")
+          log(_err)
+        })
       })
     }
   )
@@ -665,22 +705,23 @@ function chooseFile(journey) {
     return false
   }
 
-  dataProvider.setActiveJourney(journey.name)
+  dataProvider.setActiveJourney(journey.name).then((res) => {
+    myEventHandler.emit("init-node-view", res)
+    let files = journey.children.map((file) => {
+      return file.name
+    })
 
-  let files = journey.children.map((file) => {
-    return file.name
+    if (files && files.length) {
+      const msg = nova.localize(`${EXT.prefixMessage()}.select-file`)
+      nova.workspace.showChoicePalette(
+        files,
+        {
+          placeholder: msg,
+        },
+        chooseWaypoint
+      )
+    }
   })
-
-  if (files && files.length) {
-    const msg = nova.localize(`${EXT.prefixMessage()}.select-file`)
-    nova.workspace.showChoicePalette(
-      files,
-      {
-        placeholder: msg,
-      },
-      chooseWaypoint
-    )
-  }
 }
 
 function chooseWaypoint(file, index) {
@@ -708,6 +749,7 @@ function chooseWaypoint(file, index) {
       (wname, windex) => {
         if (windex > -1) {
           if (curFile.children[windex]) {
+            myEventHandler.emit("init-node-view", curFile.children[windex])
             myWorkspaceHandler.openWaypointFile([curFile.children[windex]])
           }
         }
@@ -729,6 +771,7 @@ function addJourney(journeyName) {
     save()
       .then((payload) => {
         let jn = dataProvider.getActiveJourney()
+        myEventHandler.emit("init-node-view", jn)
         myEventHandler.emit("journey-added", {
           journey: jn,
         })
@@ -768,6 +811,61 @@ function renameJourney(journeyName) {
     })
 }
 
+/**
+ * Comment
+ */
+function editComment() {
+  let item = false
+  if (treeView.selection && treeView.selection[0]) {
+    item = treeView.selection[0]
+  }
+
+  if (!item || !item.identifier) {
+    item = dataProvider.getActiveJourney() || false
+  }
+
+  if (!item || !item.identifier) {
+    const emsg = nova.localize(
+      `${EXT.prefixMessage()}.edit-comment-missing-node`
+    )
+    notify("edit_missing_subject_error", emsg)
+    return false
+  }
+
+  const stashedComment = item.comment
+  let elementNameString = item.name.substr(0, 25)
+
+  const msg = nova.localize(`${EXT.prefixMessage()}.edit-comment-prompt`)
+  const msg2 = nova.localize(`${EXT.prefixMessage()}.edit-comment-placeholder`)
+  const msg3 = nova.localize(`${EXT.prefixMessage()}.edit-comment-button`)
+
+  // TODO: API-REQUEST: Larger input panel like textarea.
+  // We have to use showInputPanel to be able to pre-populate with value option.
+  // nova.workspace.showInputPalette(
+  nova.workspace.showInputPanel(
+    `${msg} on '${elementNameString}'`,
+    {
+      prompt: msg3,
+      placeholder: msg2,
+      value: stashedComment || "",
+    },
+    (payload) => {
+      if (payload == undefined) {
+        return false
+      }
+
+      if (payload == stashedComment) {
+        return false
+      }
+
+      item.comment = payload
+      save().then((res) => {
+        //
+      })
+    }
+  )
+}
+
 function save() {
   return new Promise((resolve, reject) => {
     ensureNovaFolderExists()
@@ -775,7 +873,7 @@ function save() {
       .then((res) => {
         dataProvider
           .save()
-          .then(() => {
+          .then((saved) => {
             exports
               .load()
               .then((res) => {
@@ -864,6 +962,7 @@ exports.initialise = async function () {
     registerCommands(),
     registerEditorListeners(),
     initialiseEventListeners(),
+    initialiseNodeDataProvider(),
   ])
     .then(() => {
       if (!state.initialised) {
@@ -871,6 +970,14 @@ exports.initialise = async function () {
           .then((res) => {
             state.initialised = true
             myEventHandler.emit("environment-initialised")
+            // initialiseNodeDataProvider()
+            //   .then((res) => {
+            //     myEventHandler.emit("nodeview-initialised")
+            //   })
+            //   .catch((_err) => {
+            //     log("Node Initialisation Error!")
+            //     log(_err)
+            //   })
           })
           .then((res) => {
             exports.load().then((json) => {
@@ -951,7 +1058,23 @@ exports.launch = function () {
   // TODO debounce this so it calls less.
   return new Promise((resolve, reject) => {
     // log(`launch() launchTimeout is ${launchTimeout}`)
-    let json = dataProvider.getJson()
+    const json = dataProvider.getJson()
+
+    if (viewedNode) {
+      let item = findByAttributeRecursive(
+        json.journeys,
+        viewedNode.identifier,
+        "children",
+        "identifier",
+        false,
+        []
+      )
+      // Reload the detail node.
+      if (item && item.identifier) {
+        myEventHandler.emit("init-node-view", item)
+      }
+    }
+
     dataProvider
       .extractStoredFiles(json)
       .then((filesInStorageFile) => {
@@ -979,6 +1102,7 @@ exports.launch = function () {
           } else {
             // TODO: Target the exact node to improve performance.
             treeView.reload()
+            nodeView.reload()
             resolve(true)
           }
         })
@@ -1015,6 +1139,7 @@ exports.subscribe = async function () {
     try {
       if (state.subscribed) {
         treeView.reload()
+        nodeView.reload()
         resolve(treeView)
       } else {
         treeView = new TreeView("waypoint", {
@@ -1024,9 +1149,21 @@ exports.subscribe = async function () {
         treeView.reload()
         state.subscribed = true
 
-        // treeView.onDidChangeSelection((selection) => {
+        nodeView = new TreeView("viewer", {
+          dataProvider: nodeDataProvider,
+        })
+        nova.subscriptions.add(nodeView)
+        nodeView.reload()
+
+        // nodeView.onDidChangeSelection((selection) => {
         //   console.log("New selection: " + selection.map((e) => e.name))
         // })
+
+        treeView.onDidChangeSelection((selection) => {
+          if (selection && selection[0]) {
+            myEventHandler.emit("init-node-view", selection[0])
+          }
+        })
 
         // treeView.onDidExpandElement((element) => {
         //   console.log("Expanded: " + element.name)
