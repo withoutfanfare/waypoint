@@ -5,7 +5,6 @@
 - Automatic backup and recovery for Waypoint file
 - More translations (english only atm)
 - Export all Waypoints to markdown
-- Add comments to Journeys and Waypoints.
 - Handle bookmarking for duplicated lines (currently waypoints must be unique)
 - Improve Sidebar sorting with options
 - Handle renamed files

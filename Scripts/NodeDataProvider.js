@@ -149,8 +149,8 @@ module.exports.NodeDataProvider = class NodeDataProvider {
         if (isWaypoint && this.node.line) {
           let lineLine = {
             identifier: `dtll-${this.node.identifier}`,
-            name: `@ line ${this.node.line}`,
-            descriptiveText: "",
+            name: `${this.node.path}`,
+            descriptiveText: `@ ${this.node.line}`,
             children: [],
             tooltip: false,
             comment: false,

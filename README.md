@@ -14,7 +14,7 @@ Create Waypoints within the Files you work on, grouped by Journey.
 
 ## Usage
 
-When a Waypoint is Toggled, it is saved to the currently Active Journey at the top of the side panel. 
+When a Waypoint is Toggled, it is saved to the currently Active Journey within the SidePanel. 
 
 If no Journey is active, then a new one will be created and activated with the current date.
 
@@ -22,8 +22,9 @@ If no Journey is active, then a new one will be created and activated with the c
 
 - **Waypoint:** Create Journey (```ctrl-opt-cmd-j```)
 - **Waypoint:** Toggle Waypoint in Active Journey (```ctrl-opt-cmd-m```)
+- **Waypoint:** Edit Comment for selected node (```ctrl-opt-cmd-c```)
 - **Waypoint:** Select Journey (```ctrl-opt-cmd-;```)
-- **Waypoint:** Select Waypoint in Active Journey (```ctrl-opt-cmd-'```)
+- **Waypoint:** Select Waypoint in Active Journey/File (```ctrl-opt-cmd-'```)
 - **Waypoint:** Previous Waypoint (```ctrl-opt-cmd-[```)
 - **Waypoint:** Next Waypoint (```ctrl-opt-cmd-]```)
 
@@ -54,7 +55,6 @@ I'm working on the following improvements/bugs:
 - Automatic backup and recovery for Waypoint file
 - More translations (english only atm)
 - Export all Waypoints to markdown
-- Add comments to Journeys and Waypoints.
 - Handle bookmarking for duplicated lines (currently waypoints must be unique)
 - Improve Sidebar sorting with options
 - Handle renamed files

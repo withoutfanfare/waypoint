@@ -1,3 +1,7 @@
+## Version 1.0.6
+
+- Add comments to Journeys Files and Waypoints.
+
 ## Version 1.0.5
 
 - Prevent waypoints being created if the line appears in the file multiple times.
