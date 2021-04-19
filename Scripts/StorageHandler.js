@@ -6,7 +6,8 @@
 /**
  * Command Handler
  */
-const ext = require("./lib/extension")
+const EXT = require("./lib/extension")
+
 const {
   log,
   getLocalConfig,
@@ -14,18 +15,63 @@ const {
   ensureNovaFolderExists,
 } = require("./lib/utils")
 
+const { getFormattedTime } = require("./lib/helper")
+
 class StorageHandler {
   constructor(config = {}) {
     this.config = config
     this.waypointFilePath =
       nova.workspace.path + "/.nova/" + this.config.filename
-    this.waypointTempFilePath = ext.tmpDir() + "/" + this.config.filename
+    this.waypointTempFilePath = EXT.tmpDir() + "/" + this.config.filename
     this.fileInitialised = false
+    // this.backup()
   }
 
+  // IDEA.
+  //   backup() {
+  //     return new Promise((resolve, reject) => {
+  //       try {
+  //         if (!nova.fs.access(this.waypointFilePath, nova.fs.F_OK)) {
+  //           resolve(false)
+  //         }
+  //
+  //         const maxRetainedBackups = 5
+  //         const nowTime = getFormattedTime()
+  //         const supportPathNow = nova.path.join(EXT.backupDir(), `${nowTime}`)
+  //         const backupFile = nova.path.join(supportPathNow, "waypoints.json")
+  //
+  //         if (!nova.fs.access(supportPathNow, nova.fs.F_OK)) {
+  //           nova.fs.mkdir(supportPathNow)
+  //         }
+  //
+  //         let copied = nova.fs.copy(this.waypointFilePath, backupFile)
+  //
+  //         let listing = nova.fs.listdir(EXT.backupDir())
+  //         listing = listing
+  //           .filter((item) => {
+  //             return item && item !== ".DS_Store"
+  //           })
+  //           .sort()
+  //
+  //         const curRetainedBackups = listing.length
+  //
+  //         log(curRetainedBackups)
+  //         log(listing)
+  //
+  //         if (!curRetainedBackups || curRetainedBackups < maxRetainedBackups) {
+  //           resolve(backupFile)
+  //         }
+  //
+  //         // TODO: Delete excess folders...
+  //
+  //         resolve(backupFile)
+  //       } catch (_err) {
+  //         reject(_err)
+  //       }
+  //     })
+  //   }
+
   save(jsonString) {
-    // log("StorageHandler save")
-    // log(jsonString)
     return new Promise((resolve, reject) => {
       if (!jsonString) {
         log("STORAGE ERROR! save has no json string")

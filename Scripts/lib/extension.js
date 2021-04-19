@@ -10,7 +10,7 @@
  * @returns {string} The prefix.
  */
 exports.prefix = function () {
-  return nova.extension.identifier.split('.').pop()
+  return nova.extension.identifier.split(".").pop()
 }
 
 /**
@@ -42,7 +42,7 @@ exports.prefixMessage = function () {
  * @returns {string} The path.
  */
 exports.scriptDir = function () {
-  return nova.path.join(nova.extension.path, 'Scripts')
+  return nova.path.join(nova.extension.path, "Scripts")
 }
 
 /**
@@ -50,7 +50,7 @@ exports.scriptDir = function () {
  * @returns {string} The path.
  */
 exports.binDir = function () {
-  return nova.path.join(exports.scriptDir(), 'bin')
+  return nova.path.join(exports.scriptDir(), "bin")
 }
 
 /**
@@ -59,7 +59,7 @@ exports.binDir = function () {
  * @param {string} vendor - The vendor name.
  */
 exports.vendorDir = function (vendor) {
-  return nova.path.join(exports.scriptDir(), 'vendor', vendor)
+  return nova.path.join(exports.scriptDir(), "vendor", vendor)
 }
 
 /**
@@ -70,7 +70,7 @@ exports.vendorDir = function (vendor) {
  */
 exports.tmpDir = function () {
   const store = nova.extension.workspaceStoragePath
-  const tmp = nova.path.join(store, 'tmp')
+  const tmp = nova.path.join(store, "tmp")
   if (!nova.fs.access(tmp, nova.fs.F_OK)) {
     nova.fs.mkdir(tmp)
     return tmp
@@ -85,4 +85,29 @@ exports.tmpDir = function () {
   }
 
   return tmp
+}
+
+/**
+ * Qualified path to the temporary storage path for the extension.
+ * This function guarantees the path exists and is a writable directory.
+ * @returns {string} The path to the temporary storage directory.
+ * @throws {Error} When the path exists, but is not a writable directory.
+ */
+exports.backupDir = function () {
+  const store = nova.extension.workspaceStoragePath
+  const bkp = nova.path.join(store, "backups")
+  if (!nova.fs.access(bkp, nova.fs.F_OK)) {
+    nova.fs.mkdir(bkp)
+    return bkp
+  }
+
+  if (!nova.fs.stat(bkp).isDirectory()) {
+    throw new Error(`backup path exists but is not a directory: ${bkp}`)
+  }
+
+  if (!nova.fs.access(bkp, nova.fs.W_OK)) {
+    throw new Error(`backup directory is not writable: ${bkp}`)
+  }
+
+  return bkp
 }

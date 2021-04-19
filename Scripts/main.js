@@ -970,14 +970,6 @@ exports.initialise = async function () {
           .then((res) => {
             state.initialised = true
             myEventHandler.emit("environment-initialised")
-            // initialiseNodeDataProvider()
-            //   .then((res) => {
-            //     myEventHandler.emit("nodeview-initialised")
-            //   })
-            //   .catch((_err) => {
-            //     log("Node Initialisation Error!")
-            //     log(_err)
-            //   })
           })
           .then((res) => {
             exports.load().then((json) => {
@@ -989,7 +981,7 @@ exports.initialise = async function () {
     .catch((_e) => {
       state.initialised = false
       if (nova.inDevMode()) {
-        log("INITIALISATION ERROR! Error 32")
+        // log("INITIALISATION ERROR! Error 32")
         log(_e)
       }
       if (!state.initialisationErrorHandled) {
@@ -1024,7 +1016,7 @@ exports.load = async function () {
       .catch((_e) => {
         state.loaded = false
         if (nova.inDevMode()) {
-          log("LOAD ERROR! Error 33")
+          // log("LOAD ERROR! Error 33")
           log(_e)
         }
 
@@ -1057,7 +1049,6 @@ exports.launch = function () {
   }
   // TODO debounce this so it calls less.
   return new Promise((resolve, reject) => {
-    // log(`launch() launchTimeout is ${launchTimeout}`)
     const json = dataProvider.getJson()
 
     if (viewedNode) {
@@ -1084,7 +1075,6 @@ exports.launch = function () {
 
           state.launched = true
           if (!state.subscribed) {
-            // log("D1")
             exports
               .subscribe()
               .then((tree) => {
@@ -1111,7 +1101,7 @@ exports.launch = function () {
         state.launched = false
 
         if (nova.inDevMode()) {
-          log("LAUNCH ERROR! Error 35")
+          // log("LAUNCH ERROR! Error 35")
           log(_e)
         }
 
@@ -1173,17 +1163,17 @@ exports.subscribe = async function () {
         //   console.log("Collapsed: " + element.name)
         // })
 
-        // TODO: When does this trigger?
-        treeView.onDidChangeVisibility(() => {
-          console.log("Visibility Changed")
-          treeView.reload()
-        })
+        // TODO: When/if does this actually trigger?
+        // treeView.onDidChangeVisibility(() => {
+        //   console.log("Visibility Changed")
+        //   treeView.reload()
+        // })
 
         resolve(treeView)
       }
     } catch (_e) {
       state.subscribed = false
-      log("SUBSCRIBE ERROR! Error 36")
+      // log("SUBSCRIBE ERROR! Error 36")
       log(_e)
 
       if (!state.subscribeErrorHandled) {
@@ -1206,5 +1196,7 @@ exports.subscribe = async function () {
 
 exports.deactivate = function () {
   treeView = null
+  nodeView = null
   dataProvider = null
+  nodeDataProvider = null
 }

@@ -1,3 +1,7 @@
+## Version 1.0.7
+
+- Fixed bug with displayed comment length
+
 ## Version 1.0.6
 
 - Add comments to Journeys Files and Waypoints.

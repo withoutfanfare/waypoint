@@ -52,6 +52,7 @@ You can also configure preferences on a per-project basis in ```Project → Proj
 
 I'm working on the following improvements/bugs:
 
+- Better support for comments in sidebar (Nova API dependent)
 - Automatic backup and recovery for Waypoint file
 - More translations (english only atm)
 - Export all Waypoints to markdown
@@ -60,7 +61,7 @@ I'm working on the following improvements/bugs:
 - Handle renamed files
 - Better support for multiple Nova windows and document editors
 - Improve "line realignent" mechanism
-- Drag and drop Waypoints into other Journeys
+- Drag and drop Waypoints into other Journeys (Nova API dependent)
 - If user deletes their .nova folder, then destroy the in memory tree data
 
 ## Issues

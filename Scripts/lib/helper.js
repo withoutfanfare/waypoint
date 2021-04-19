@@ -63,3 +63,16 @@ exports.itemToJson = function itemToJson(node) {
   }
   return newObj
 }
+
+exports.getFormattedTime = function getFormattedTime() {
+  let today = new Date()
+  let y = today.getFullYear()
+  // JavaScript months are 0-based.
+  let m = today.getMonth() + 1
+  let d = today.getDate()
+  let h = today.getHours()
+  let mi = today.getMinutes()
+  let s = today.getSeconds()
+  //  + "-" + s
+  return y + "-" + m + "-" + d + "-" + h + "-" + mi
+}

@@ -1,3 +1,5 @@
+const EXT = require("../lib/extension")
+
 exports.log = function (msg) {
   if (nova.inDevMode()) {
     console.log(msg)
@@ -82,7 +84,7 @@ exports.ensureWorkspace = function ensureWorkspace() {
      * If not a project workspace, prevent further execution
      */
     if (!exports.isWorkspace()) {
-      const msg = nova.localize(`${ext.prefixMessage()}.not-workspace-error`)
+      const msg = nova.localize(`${EXT.prefixMessage()}.not-workspace-error`)
       reject(msg)
     } else {
       resolve(true)

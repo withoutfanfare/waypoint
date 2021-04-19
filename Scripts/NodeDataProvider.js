@@ -165,7 +165,7 @@ module.exports.NodeDataProvider = class NodeDataProvider {
           name: elementCommentString || "Doubleclick to add comment",
           descriptiveText: showElip,
           children: [],
-          tooltip: elementCommentString,
+          tooltip: elementComment,
           // comment: elementComment,
           contextValue: "comment",
         }
