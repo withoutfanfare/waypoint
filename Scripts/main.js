@@ -96,6 +96,18 @@ const defaultSortBy = BASE.sortBy()
  */
 const defaultMarkerFilename = BASE.markerFilename()
 
+function valdiateRequiredObjects() {
+  if(!dataProvider) { return false; }
+  if(!nodeDataProvider) { return false; }
+  if(!myEventHandler) { return false; }
+  if(!treeView) { return false; }
+  if(!nodeView) { return false; }
+  if(!myWorkspaceHandler) { return false; }
+  if(!myStorageHandler) { return false; }
+  
+  return true
+}
+
 /**
  * Initialise WorkspaceHandler.
  */
@@ -182,6 +194,11 @@ function initialiseNodeDataProvider() {
  * Register the extension Commands.
  */
 function registerCommands() {
+  
+  // if(!valdiateRequiredObjects()) {
+  //   return false
+  // }
+  
   return new Promise((resolve, reject) => {
     try {
       const prefix = EXT.prefixCommand()
@@ -190,6 +207,10 @@ function registerCommands() {
        * Reload the data from file and refresh interface.
        */
       nova.commands.register(`${EXT.prefixCommand()}.refresh`, () => {
+        if(!valdiateRequiredObjects()) {
+          return false
+        }
+        
         exports.load().then((res) => {
           myEventHandler.emit("request-launch")
         })
@@ -199,6 +220,10 @@ function registerCommands() {
        * Open file to ActiveEditor at the marked line.
        */
       nova.commands.register(`${EXT.prefixCommand()}.doubleClick`, () => {
+        if(!valdiateRequiredObjects()) {
+          return false
+        }
+        
         treeView.selection.forEach((obj) => {
           myWorkspaceHandler.openWaypointFile(treeView.selection)
         })
@@ -208,6 +233,10 @@ function registerCommands() {
        * Set a Journey as Active.
        */
       nova.commands.register(`${EXT.prefixCommand()}.activateJourney`, () => {
+        if(!valdiateRequiredObjects()) {
+          return false
+        }
+        
         let sname = treeView.selection
           ? treeView.selection.map((e) => e.name)[0]
           : false
@@ -228,6 +257,10 @@ function registerCommands() {
        * Add new Journey
        */
       nova.commands.register(`${EXT.prefixCommand()}.addJourney`, () => {
+        if(!valdiateRequiredObjects()) {
+          return false
+        }
+        
         const msg = nova.localize(`${EXT.prefixMessage()}.enter-journey-name`)
         const msg2 = nova.localize(
           `${EXT.prefixMessage()}.enter-journey-placeholder`
@@ -245,6 +278,10 @@ function registerCommands() {
        * Select a File and Waypoint
        */
       nova.commands.register(`${EXT.prefixCommand()}.selectWaypoint`, () => {
+        if(!valdiateRequiredObjects()) {
+          return false
+        }
+        
         try {
           let active = dataProvider.getActiveJourney()
           myEventHandler.emit("init-node-view", active)
@@ -260,6 +297,10 @@ function registerCommands() {
        * Select Journey
        */
       nova.commands.register(`${EXT.prefixCommand()}.selectJourney`, () => {
+        if(!valdiateRequiredObjects()) {
+          return false
+        }
+        
         chooseJourney()
       })
 
@@ -267,6 +308,10 @@ function registerCommands() {
        * Rename Journey.
        */
       nova.commands.register(`${EXT.prefixCommand()}.rename`, () => {
+        if(!valdiateRequiredObjects()) {
+          return false
+        }
+        
         if (treeView.selection) {
           const msg = nova.localize(`${EXT.prefixMessage()}.new-journey-name`)
           const msg2 = nova.localize(
@@ -287,6 +332,10 @@ function registerCommands() {
        * Rename Journey.
        */
       nova.commands.register(`${EXT.prefixCommand()}.editcomment`, () => {
+        if(!valdiateRequiredObjects()) {
+          return false
+        }
+        
         editComment()
       })
 
@@ -294,6 +343,10 @@ function registerCommands() {
        * Remove one or more waypoints at any depth.
        */
       nova.commands.register(`${EXT.prefixCommand()}.remove`, () => {
+        if(!valdiateRequiredObjects()) {
+          return false
+        }
+        
         return new Promise((resolve, reject) => {
           const myActiveJourneyName = dataProvider.getActiveJourneyName()
           const deletables = treeView.selection.map((waypointObj) => {
@@ -325,6 +378,11 @@ function registerCommands() {
       nova.commands.register(
         `${EXT.prefixCommand()}.createWaypoint`,
         (workspace) => {
+          
+          if(!valdiateRequiredObjects()) {
+            return false
+          }
+          
           dataProvider
             .createWaypoint(workspace)
             .then((active) => {
@@ -352,6 +410,10 @@ function registerCommands() {
        * Open previous Waypoint in editor
        */
       nova.commands.register(`${EXT.prefixCommand()}.prevWaypoint`, () => {
+        if(!valdiateRequiredObjects()) {
+          return false
+        }
+        
         let flatIndexes = dataProvider.getWaypointIds()
         if (!flatIndexes || !flatIndexes.length) {
           return false
@@ -385,6 +447,10 @@ function registerCommands() {
        * Open next Waypoint in editor
        */
       nova.commands.register(`${EXT.prefixCommand()}.nextWaypoint`, () => {
+        if(!valdiateRequiredObjects()) {
+          return false
+        }
+        
         let flatIndexes = dataProvider.getWaypointIds()
         if (!flatIndexes || !flatIndexes.length) {
           return false
@@ -839,10 +905,7 @@ function editComment() {
   const msg2 = nova.localize(`${EXT.prefixMessage()}.edit-comment-placeholder`)
   const msg3 = nova.localize(`${EXT.prefixMessage()}.edit-comment-button`)
 
-  // TODO: API-REQUEST: Larger input panel like textarea.
-  // We have to use showInputPanel to be able to pre-populate with value option.
-  // nova.workspace.showInputPalette(
-  nova.workspace.showInputPanel(
+  nova.workspace.showInputPalette(
     `${msg} on '${elementNameString}'`,
     {
       prompt: msg3,

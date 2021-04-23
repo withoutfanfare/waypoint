@@ -1,3 +1,8 @@
+## Version 1.0.8
+
+- Use inputPallete for comments on waypoints
+- Better error handling during startup
+
 ## Version 1.0.7
 
 - Fixed bug with displayed comment length

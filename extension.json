@@ -6,7 +6,7 @@
   "repository": "https://github.com/withoutfanfare/waypoint",
   "bugs": "https://github.com/withoutfanfare/waypoint/issues",
   "min_runtime": "4.1",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "categories": ["sidebars"],
 
   "main": "main.js",
