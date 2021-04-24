@@ -16,6 +16,7 @@
   "waypoint.msg.select-journey": "Select Journey",
   "waypoint.msg.select-file": "Select File",
   "waypoint.msg.select-waypoint": "Select Waypoint",
+  "waypoint.msg.max-characters-journey": "Max journey name length is 50 chars! Nova has trimmed it for you - please review.",
   "waypoint.msg.enter-journey-name": "Enter journey name, or enter blank for a dated journey",
   "waypoint.msg.enter-journey-placeholder": "Journey name or blank",
   "waypoint.msg.new-journey-name": "Enter journey name, or enter blank for a dated journey",

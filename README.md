@@ -52,17 +52,19 @@ You can also configure preferences on a per-project basis in ```Project → Proj
 
 I'm working on the following improvements/bugs:
 
-- Better support for comments in sidebar (Nova API dependent)
-- Automatic backup and recovery for Waypoint file
-- More translations (english only atm)
-- Export all Waypoints to markdown
-- Handle bookmarking for duplicated lines (currently waypoints must be unique)
 - Improve Sidebar sorting with options
 - Handle renamed files
+- Export all Waypoints to markdown
 - Better support for multiple Nova windows and document editors
 - Improve "line realignent" mechanism
-- Drag and drop Waypoints into other Journeys (Nova API dependent)
-- If user deletes their .nova folder, then destroy the in memory tree data
+- Make console errors less dramatic/scarey!
+- Better README for extension and more info on usage
+- Automatic backup and recovery for Waypoint file
+- More translations (english only atm)
+- Handle bookmarking for duplicated lines (currently waypoints must be unique)
+- Drag and drop Waypoints into other Journeys (Requires Nova API support)
+- Better display of comments in sidebar (Requires Nova API support)
+- Display waypoints in filepanel (Requires Nova API support)
 
 ## Issues
 

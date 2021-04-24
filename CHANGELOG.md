@@ -1,3 +1,9 @@
+## Version 1.0.9
+
+- Will offer a trimmed replacement if journey name exceeds 50 characters.
+- Cleanup if .nova folder is deleted or renamed.
+- Fixed bug when opening single file not a folder
+
 ## Version 1.0.8
 
 - Use inputPallete for comments on waypoints

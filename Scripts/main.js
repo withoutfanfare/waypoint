@@ -24,6 +24,7 @@ const {
   ensureNovaFolderExists,
   ensureWorkspace,
   debounce,
+  ensureFolder
 } = require("./lib/utils")
 
 const {
@@ -261,17 +262,19 @@ function registerCommands() {
           return false
         }
         
-        const msg = nova.localize(`${EXT.prefixMessage()}.enter-journey-name`)
-        const msg2 = nova.localize(
-          `${EXT.prefixMessage()}.enter-journey-placeholder`
-        )
-        nova.workspace.showInputPalette(
-          msg,
-          {
-            placeholder: msg2,
-          },
-          addJourney
-        )
+        // const msg = nova.localize(`${EXT.prefixMessage()}.enter-journey-name`)
+        // const msg2 = nova.localize(
+        //   `${EXT.prefixMessage()}.enter-journey-placeholder`
+        // )
+        // nova.workspace.showInputPalette(
+        //   msg,
+        //   {
+        //     placeholder: msg2,
+        //   },
+        //   addJourney
+        // )
+        
+        showAddJourney()
       })
 
       /**
@@ -701,6 +704,21 @@ function initialiseEventListeners() {
       // myEventHandler.on("reset-data", function (payload) {
       //   log("reset-data")
       // })
+      
+      let novaFolder = nova.path.join(nova.workspace.path, ".nova")
+      if (nova.fs.access(novaFolder, nova.fs.W_OK)) {
+        nova.fs.watch(novaFolder, (ev) => {
+          if(!nova.fs.access(novaFolder, nova.fs.W_OK)) {
+            notify("nova_folder_gone", '.nova folder has gone away')
+            if(dataProvider) {
+              dataProvider.setJson(null)
+              dataProvider.setRootItems([])
+              dataProvider.setWaypointIds([])            
+            }
+          }
+        });
+      }
+      
 
       resolve(true)
     } catch (_err) {
@@ -824,6 +842,33 @@ function chooseWaypoint(file, index) {
   }
 }
 
+
+function showAddJourney(arg) {
+  let msg = nova.localize(`${EXT.prefixMessage()}.enter-journey-name`)
+  const msg2 = nova.localize(
+    `${EXT.prefixMessage()}.enter-journey-placeholder`
+  )
+  
+  let ops = {
+    placeholder: msg2,
+  }
+  
+  if(arg && arg.value) {
+    ops.value = arg.value
+  }
+  
+  if(arg && arg.message) {
+    msg = nova.localize(`${EXT.prefixMessage()}.${arg.message}`)
+  }
+  
+  nova.workspace.showInputPalette(
+    msg,
+    ops,
+    addJourney
+  )
+  
+}
+
 /**
  * Add a Journey to the tree data and save to file.
  */
@@ -833,7 +878,17 @@ function addJourney(journeyName) {
   }
 
   try {
-    dataProvider.addJourney(journeyName.trim())
+    
+    let jName = journeyName.trim()
+    if(jName.length > 50) {
+      // nova.workspace.showWarningMessage("Max journey name length is 50 chars.")
+      // notify("max_length_error", "Max journey name length is 50 chars.")
+      let value = jName.substr(0, 50)
+      let message = "max-characters-journey"
+      return showAddJourney({ value, message })
+    }
+    
+    dataProvider.addJourney(jName)
     save()
       .then((payload) => {
         let jn = dataProvider.getActiveJourney()
@@ -1019,6 +1074,7 @@ exports.activate = async function () {
 exports.initialise = async function () {
   return Promise.all([
     ensureWorkspace(),
+    ensureFolder(),
     initialiseWorkspaceHandler(),
     initialiseStorageHandler(),
     initialiseEmitHandler(),

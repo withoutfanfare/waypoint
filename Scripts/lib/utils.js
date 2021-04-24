@@ -92,20 +92,60 @@ exports.ensureWorkspace = function ensureWorkspace() {
   })
 }
 
+
+exports.ensureFolder = function ensureFolder() {
+  return new Promise((resolve, reject) => {
+    try {
+      if (!nova.workspace || !nova.workspace.path) {
+        throw new Error("missing nova.workspace.path.");
+      }
+      
+      let openPath = nova.workspace.path
+            
+      if (!nova.fs.access(openPath, nova.fs.W_OK)) {
+        throw new Error("unable to open nova.workspace.path.");
+      }
+      
+      if(!nova.fs.stat(openPath)) {
+        throw new Error("unable to stat nova.workspace.path");
+      }
+      
+      if (nova.fs.stat(openPath) && !nova.fs.stat(openPath).isDirectory()) {
+        throw new Error("nova.workspace.path is not a directory");
+      }
+      
+      resolve(true)
+      
+    } catch (_err) {
+      console.log(_err)
+      reject(false)
+    }
+  })
+}
+
+
 /*
 Returns a boolean representing whether or not a .nova folder is present.
 */
-exports.isProject = function isProject() {
-  let novaFolder = nova.path.join(nova.workspace.path, ".nova")
-  if (!nova.fs.access(novaFolder, nova.fs.W_OK)) {
-    return false
-  }
-
-  if (!nova.fs.stat(novaFolder).isDirectory()) {
-    return false
-  }
-
-  return true
+exports.isProject = function isProject() {  
+  return new Promise((resolve, reject) => {
+    try {
+      let novaFolder = nova.path.join(nova.workspace.path, ".nova")
+      if (!nova.fs.access(novaFolder, nova.fs.W_OK)) {
+        throw new Error("missing .nova folder.");
+      }
+      
+      if (!nova.fs.stat(novaFolder).isDirectory()) {
+        throw new Error(".nova is not a directory");
+      }
+      
+      resolve(true)
+      
+    } catch (_err) {
+      console.log(_err)
+      reject(false)
+    }
+  })
 }
 
 /*
