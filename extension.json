@@ -45,37 +45,37 @@
       {
         "title": "Waypoint: Create Journey",
         "command": "waypoint.cmd.addJourney",
-        "shortcut": "ctrl-opt-cmd-j"
+        "shortcut": "shift-ctrl-j"
       },
       {
         "title": "Waypoint: Toggle Waypoint",
         "command": "waypoint.cmd.createWaypoint",
-        "shortcut": "ctrl-opt-cmd-m"
+        "shortcut": "shift-ctrl-m"
       },
       {
         "title": "Waypoint: Next",
         "command": "waypoint.cmd.nextWaypoint",
-        "shortcut": "ctrl-opt-cmd-]"
+        "shortcut": "shift-ctrl-]"
       },
       {
         "title": "Waypoint: Previous",
         "command": "waypoint.cmd.prevWaypoint",
-        "shortcut": "ctrl-opt-cmd-["
+        "shortcut": "shift-ctrl-["
       },
       {
         "title": "Waypoint: Select Journey",
         "command": "waypoint.cmd.selectJourney",
-        "shortcut": "ctrl-opt-cmd-;"
+        "shortcut": "shift-ctrl-1"
       },
       {
         "title": "Waypoint: Select Waypoint in Active Journey",
         "command": "waypoint.cmd.selectWaypoint",
-        "shortcut": "ctrl-opt-cmd-'"
+        "shortcut": "shift-ctrl-2"
       },
       {
         "title": "Waypoint: Edit Comment",
         "command": "waypoint.cmd.editcomment",
-        "shortcut": "ctrl-opt-cmd-c"
+        "shortcut": "shift-ctrl-c"
       }
     ]
   },

@@ -1,0 +1,16 @@
+assets/*
+node_modules/*
+assets/js/*
+private/*
+dist/*
+templates/*
+website/*
+notes/*
+.nuxt/*
+static/*
+.nuxt/*
+.nova/*
+.vscode/*
+.git/*
+!.eslintrc.js
+

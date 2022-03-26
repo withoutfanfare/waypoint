@@ -20,13 +20,13 @@ If no Journey is active, then a new one will be created and activated with the c
 
 ### Command Palette
 
-- **Waypoint:** Create Journey (```ctrl-opt-cmd-j```)
-- **Waypoint:** Toggle Waypoint in Active Journey (```ctrl-opt-cmd-m```)
-- **Waypoint:** Edit Comment for selected node (```ctrl-opt-cmd-c```)
-- **Waypoint:** Select Journey (```ctrl-opt-cmd-;```)
-- **Waypoint:** Select Waypoint in Active Journey/File (```ctrl-opt-cmd-'```)
-- **Waypoint:** Previous Waypoint (```ctrl-opt-cmd-[```)
-- **Waypoint:** Next Waypoint (```ctrl-opt-cmd-]```)
+- **Waypoint:** Create Journey (```shift-ctrl-j```)
+- **Waypoint:** Toggle Waypoint in Active Journey (```shift-ctrl-m```)
+- **Waypoint:** Edit Comment for selected node (```shift-ctrl-c```)
+- **Waypoint:** Select Journey (```shift-ctrl-;```)
+- **Waypoint:** Select Waypoint in Active Journey/File (```shift-ctrl-'```)
+- **Waypoint:** Previous Waypoint (```shift-ctrl-[```)
+- **Waypoint:** Next Waypoint (```shift-ctrl-]```)
 
 ### Sidebar
 
